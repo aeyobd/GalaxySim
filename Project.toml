@@ -1,0 +1,19 @@
+name = "GalaxySim"
+uuid = "acb07f55-bd29-4b0d-84d7-cda6267f5828"
+authors = ["Daniel Boyea <aeyobd@gmail.com> and contributors"]
+version = "1.0.0-DEV"
+
+[deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
