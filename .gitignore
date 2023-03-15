@@ -1,4 +1,6 @@
 /Manifest.toml
 .git
 .ipynb*
+.dat
+data/*
 
