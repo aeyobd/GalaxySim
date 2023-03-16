@@ -3,6 +3,8 @@ export main
 
 using LinearAlgebra
 import ForwardDiff: derivative, gradient
+using StaticArrays
+using NearestNeighbors
 
 # Lengths are pc, times are years
 # Masses in solar mass
@@ -10,8 +12,8 @@ import ForwardDiff: derivative, gradient
 const G = 4.4985e-15
 
 mutable struct Mass
-    x::Vector{AbstractFloat}
-    v::Vector{AbstractFloat}
+    x::SVector{3, AbstractFloat}
+    v::SVector{3, AbstractFloat}
     m::AbstractFloat
 end
 
@@ -74,7 +76,50 @@ function dΦ(x, others)
     end
 end
 
+
+"""
+get the nearist parlticles 
+x is array ndxnp
+"""
+function nearist_neighbors(x, k=10)
+    tree = KDTree(x)
+    idxs, dists = knn(tree, data, k, true)
+    return idxs, dists
+end
+
+
+"""
+get density at r given particles and smoothing length h
+
+ρ = ∑_b m_b W(r_a - r_b; h); (h smoothing length)
+dv/dt = 
+"""
+function ρ(r, particles, h)
+    # weighted sum over nearby particles
+    # # e.g. quintic spline
+end
+
+
+"""
+The ideal smoothing length at r
+"""
+function h(r, particles)
+
+end
+
+
+"""
+Dρ/Dt = -ρ∇⋅v
+Dv/Dt = -1/ρ ∇P
+De/Dt = -1/ρ∇⋅Pv
+
+energy per unit pass
+e = u + v^2/2
+P=(γ-1)ρ u
+γ=5/3
+"""
 function update_particle!(particle, dt)
+
     particle.x .+= particle.v * dt 
     particle.v .-= dΦ(particle.x)*dt
 end
@@ -86,7 +131,6 @@ function update_particles!(particles, dt)
     end
 
 end
-
 
 
 end
