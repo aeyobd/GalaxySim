@@ -8,34 +8,19 @@ using StaticArrays
 using NearestNeighbors
 
 include("init.jl")
+include("particle.jl")
 
 # Lengths are pc, times are years
 # Masses in solar mass
 
-const G = 4.4985e-15
 
-Base.@kwdef mutable struct Particle
-    x
-    v
-    m
-
-    # ρ::Real = NaN
-    # h::Real = NaN
-    # W::Vector = NaN
-    # 
-    # u::Vector = []
-    # stars::Vector = []
-    # neighbors::Vector = []
-    # distances::Vector = []
-end
+const G = init.G
 
 
 
 
-function main(dt=1e3, t_end=10e6)
-    m1 = Particle([1000., 0, 0], [0, 1e-5, 0], 1)
-    m2 = Particle([100., 0, 0], [0, 2e-5, 0], 1)
-    masses = [m1, m2]
+function main(dt=100e3, t_end=100e6)
+    masses = init.rand_particles()
 
     files = open_files(length(masses))
 

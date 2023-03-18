@@ -2,6 +2,11 @@ module init
 
 import LinearAlgebra: norm, normalize
 import SpecialFunctions: gamma
+import Roots: find_zero
+using Distributions
+import Base: rand
+
+include("particle.jl")
 
 const G = 4.4985e-15
 
@@ -35,11 +40,59 @@ function a_DM(x::Vector)
 end
 
 
-const β=5
-const k_ρ = gamma(β/2)/(gamma((β-3)/2) * π^(3/2))
 const Rp = Rs
-function ρ_bary(r)
-    3*M_bary/(4π * Rp^3) / (1 + (r/Rp)^2)^(β/2)
+const γ = 1.5
+ρ_bary(r) = (3-γ)/4π * (M_bary*Rp)/(r^γ * (r+Rp)^(4-γ))
+
+# radius sampler helper
+∫ρ_bary(r) = r^(3-γ) * (r+Rs)^(γ-3)
+
+
+function rand_r()
+    p = 0.866rand() + 0.001
+    find_zero(x->p-∫ρ_bary(x), (0, R_virial))
+end
+
+const N_particles = 1000
+
+function rand_m()
+    return rand(Normal(M_bary/N_particles, M_bary/N_particles * 0.05))
+end
+
+function rand_unit_vector()
+    θ = rand() * 2π
+    ϕ = acos(2*rand() - 1)
+
+    x = sin(ϕ) * cos(θ)
+    y = cos(ϕ) * cos(θ)
+    z = sin(θ)
+    return [x,y,z]
+end
+
+function rand_x(R)
+    return R .* rand_unit_vector()
+end
+
+function rand_speed()
+    rand(Normal(1, 0.3))
+end
+
+function rand_v(R)
+    return rand_speed()*v_virial(R)*rand_unit_vector() 
+end
+
+function rand_particle()
+    R = rand_r()
+    m = rand_m()
+
+    x = rand_x(R)
+    v = rand_v(R)
+
+    return particle.Particle(x=x, v=v, m=m)
+end
+
+function rand_particles()
+    return [rand_particle() for _ in 1:N_particles]
 end
 
 
