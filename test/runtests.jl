@@ -7,8 +7,8 @@ using QuadGK
     # Write your tests here.
 end
 
-@testset "calc.jl" begin
-    include("../src/calc.jl")
+@testset "density.jl" begin
+    include("../src/density.jl")
 
     @test quadgk(x->calc.w(x)*4π*x^2, 0, 5)[1] ≈ 1 atol = 0.0001
 
@@ -18,4 +18,12 @@ end
         s += abs(derivative(x->calc.W(1,x), x) - calc.∂W_∂h(1, x))
     end
     @test s ≈ 0 atol = 1e-5
+end
+
+@testset "init.jl" begin
+    include("../src/init.jl")
+
+    @test quadgk(x->init.ρ_bary(x)*4π*x^2, 0, init.R_virial)[1] ≈ init.M_bary atol = 1
+
+
 end

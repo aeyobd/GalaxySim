@@ -1,35 +1,12 @@
 module calc
 export ∇, w
 
-import ForwardDiff: gradient
 import LinearAlgebra: norm
 import Roots: find_zero
-
-mutable struct Particle
-    m::AbstractFloat #static
-
-    x::Vector
-    v::Vector
-
-    ρ::Real = nothing
-    h::Real = nothing
-    W::Vector = nothing
-    
-    u = nothing
-    stars::Vector = nothing
-end
 
 function add_density!(p, particles)
     p.ρ = ρ(p, particles)
     p.h = h(p.ρ, p.m)
-end
-
-"""
-Vectorized form can be used
-as divergance operator
-"""
-function ∇(f, x)
-    return gradient(f, x)
 end
 
 const ρ_init = 1
@@ -42,6 +19,7 @@ end
 
 """
 x, m should be arrays, x is 3xN and m is N
+ρ = ∑_b m_b W(r_a - r_b; h); (h smoothing length)
 """
 function ρ(r, h, particles)
     s = 0
@@ -59,6 +37,7 @@ end
 """
 the weight function for 
 calculation ρ(q) where q=r/h
+
 
 normalized to 1 for a sphere of radius q=1
 """
