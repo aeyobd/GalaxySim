@@ -45,7 +45,7 @@ const γ = 1.5
 ρ_bary(r) = (3-γ)/4π * (M_bary*Rp)/(r^γ * (r+Rp)^(4-γ))
 
 # radius sampler helper
-∫ρ_bary(r) = r^(3-γ) * (r+Rs)^(γ-3)
+∫ρ_bary(r) = r^(3-γ) * (r+Rp)^(γ-3)
 
 
 function rand_r()

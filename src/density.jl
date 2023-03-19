@@ -2,22 +2,30 @@ module density
 export ∇, w
 
 import LinearAlgebra: norm
-import NLsolve: nlsolve
+import NLsolve: nlsolve, newton
 
 const ρ_max = 100
 
 function ρ(p, particles, ρ0=100, h0=0.1)
-    solution = nlsolve([ρ0, h0]) do F, x
-        f!(F, x, p, particles)
-    end
-    solution.zero
+
+    f1!(F, x) = f!(F, x, p, particles)
+    j1!(J, x) = j!(J, x, p, particles)
+
+    solution = nlsolve(f1!, j1!, [ρ0, h0], xtol=2e-4, iterations=200)
+
+    # println("iterations\t", solution.iterations)
+    # println("f calls   \t", solution.f_calls)
+    # println("J calls   \t", solution.g_calls)
+    # println("converged \t", solution.x_converged)
+
+    return solution.zero
 end
 
 """
 x, m should be arrays, x is 3xN and m is N
 ρ = ∑_b m_b W(r_a - r_b; h); (h smoothing length)
 """
-function ρ(p0, h, particles)
+function ρ(p0, h::Real, particles)
     s = 0
     for p in (particles[findall(x->x!==p0, particles)])
         s += p.m * W(dist(p0.x,p.x), h)
@@ -31,6 +39,9 @@ end
 
 
 function W(r, h)
+    if isnan(r) || isnan(h)
+        return NaN
+    end
     return w(abs(r/h))/h^3
 end
 
@@ -58,19 +69,26 @@ end
 
 
 function ∂W_∂h(r, h)
-    q = r/h
-    σ=1/24π * r/h^2
+    if isnan(r) || isnan(h)
+        return NaN
+    end
+    q = abs(r/h)
+    σ = 1/24π * r/h^5
+
     if q>=3
-        return 0
+        w1 = 0
     elseif 2<=q< 3
-        return σ * (3-q)^4
+        w1 = σ * (3-q)^4
     elseif 1<=q<2
-        return σ *( (3-q)^4 - 6*(2-q)^4 )
+        w1 = σ *( (3-q)^4 - 6*(2-q)^4 )
     elseif 0 <=q<1
-        return σ * ( (3-q)^4 - 6*(2-q)^4 + 15*(1-q)^4 )
+        w1 = σ * ( (3-q)^4 - 6*(2-q)^4 + 15*(1-q)^4 )
     else
         throw(DomainError(w, "argument must be >= 0"))
     end
+
+    w2 = -3/h * W(r, h)
+    return w1 + w2
 end
 
 # functions for NLsolve
@@ -84,17 +102,16 @@ end
 function j!(J, x, p, particles)
     # implement 
     #
-    J[1,1]=-1
-    J[1,2] = sum([p1.mb * ∂W_∂h(dist(p1.x, p.x)) for p1 in particles])
-    J[2,1] = -η ∛m * 1/3 * (x[1])^(-2/3)
+    J[1,1] = -1
+    J[1,2] = sum([p1.m * ∂W_∂h(dist(p1.x, p.x), x[2]) for p1 in particles])
+    J[2,1] = -η*(p.m)^(1/3) * 1/3 * (abs(x[1]))^(-4/3)
     J[2,2] = -1
 end
 
 const η = 1.
 function h(ρ1, m)
-    return η * ∛(m/ρ1)
+    return η * (m/abs(ρ1))^(1/3)
 end
-
 
 
 
