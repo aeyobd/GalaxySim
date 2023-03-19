@@ -1,37 +1,37 @@
-module calc
+module density
 export ∇, w
 
 import LinearAlgebra: norm
-import Roots: find_zero
+import NLsolve: nlsolve
 
-function add_density!(p, particles)
-    p.ρ = ρ(p, particles)
-    p.h = h(p.ρ, p.m)
-end
+const ρ_max = 100
 
-const ρ_init = 1
-
-function ρ(p, particles)
-    return find_zero(ρ_init) do ρ_a
-        ρ_a - ρ(p.x, h(ρ_a, p.m), particles)
+function ρ(p, particles, ρ0=100, h0=0.1)
+    solution = nlsolve([ρ0, h0]) do F, x
+        f!(F, x, p, particles)
     end
+    solution.zero
 end
 
 """
 x, m should be arrays, x is 3xN and m is N
 ρ = ∑_b m_b W(r_a - r_b; h); (h smoothing length)
 """
-function ρ(r, h, particles)
+function ρ(p0, h, particles)
     s = 0
-    for p in particles
-        s += p.m * W(dist(r,p.x), h)
+    for p in (particles[findall(x->x!==p0, particles)])
+        s += p.m * W(dist(p0.x,p.x), h)
     end
     return s
 end
 
-
 function dist(ra, rb)
     return norm(ra .- rb)
+end
+
+
+function W(r, h)
+    return w(abs(r/h))/h^3
 end
 
 """
@@ -73,14 +73,29 @@ function ∂W_∂h(r, h)
     end
 end
 
+# functions for NLsolve
+#
 
-function W(r, h)
-    return w(r/h)
+function f!(F, x, p, particles)
+    F[1] = ρ(p, x[2], particles) - x[1]
+    F[2] = h(x[1], p.m) - x[2]
 end
 
-const η = 1
+function j!(J, x, p, particles)
+    # implement 
+    #
+    J[1,1]=-1
+    J[1,2] = sum([p1.mb * ∂W_∂h(dist(p1.x, p.x)) for p1 in particles])
+    J[2,1] = -η ∛m * 1/3 * (x[1])^(-2/3)
+    J[2,2] = -1
+end
+
+const η = 1.
 function h(ρ1, m)
     return η * ∛(m/ρ1)
 end
+
+
+
 
 end
