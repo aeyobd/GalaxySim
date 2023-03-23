@@ -3,32 +3,67 @@ export ∇, w
 
 import LinearAlgebra: norm
 import NLsolve: nlsolve, newton
+using IntervalRootFinding
+using StaticArrays
+
 
 const ρ_max = 100
 
-function ρ(p, particles, ρ0=100, h0=0.1)
+function constraint!(x)
+    x[1] = max(0, x[1])
+    x[2] = max(0, x[2])
+end
 
-    f1!(F, x) = f!(F, x, p, particles)
-    j1!(J, x) = j!(J, x, p, particles)
 
-    solution = nlsolve(f1!, j1!, [ρ0, h0], xtol=2e-4, iterations=200)
+function itersolve(f, x0, range, maxiter=100, tol=1e-8)
+    x = x0
+    for i in 1:maxiter
+        dx = f(x) - x
+        x += dx
+        if abs(dx/x) < tol
+            return x
+        end
+        x = max(x, range[1])
+        x = min(x, range[2])
+    end
+    println("failed")
+    return x
+end
 
-    # println("iterations\t", solution.iterations)
-    # println("f calls   \t", solution.f_calls)
-    # println("J calls   \t", solution.g_calls)
-    # println("converged \t", solution.x_converged)
 
-    return solution.zero
+function solve(p, particles, distances)
+    function fi(x)
+        hi = h(x, p.m)
+        return ρ(p, hi, particles, distances)
+    end
+
+    soln = itersolve(fi, p.ρ, [1e-6,1e3])
+    
+    return soln
+end
+
+
+function ρ(p, particles, distances)
+    return solve(p, particles, distances)
 end
 
 """
-x, m should be arrays, x is 3xN and m is N
+x, m should be arraysh x is 3xN and m is N
 ρ = ∑_b m_b W(r_a - r_b; h); (h smoothing length)
 """
+function ρ(p0, h::Real, particles, distances)
+    s = 0
+    for (p, d) in zip(particles, distances)
+        s += p.m * W(d, h)
+    end
+    return s
+end
+
 function ρ(p0, h::Real, particles)
     s = 0
-    for p in (particles[findall(x->x!==p0, particles)])
-        s += p.m * W(dist(p0.x,p.x), h)
+    for p in particles
+        d = dist(p.x, p0.x)
+        s += p.m * W(d, h)
     end
     return s
 end
@@ -36,6 +71,7 @@ end
 function dist(ra, rb)
     return norm(ra .- rb)
 end
+
 
 
 function W(r, h)
@@ -63,6 +99,7 @@ function w(q)
     elseif 0 <=q<1
         return σ * ( (3-q)^5 - 6*(2-q)^5 + 15*(1-q)^5 )
     else
+        return NaN
         throw(DomainError(w, "argument must be >= 0"))
     end
 end
@@ -84,6 +121,7 @@ function ∂W_∂h(r, h)
     elseif 0 <=q<1
         w1 = σ * ( (3-q)^4 - 6*(2-q)^4 + 15*(1-q)^4 )
     else
+        return NaN
         throw(DomainError(w, "argument must be >= 0"))
     end
 
@@ -91,19 +129,44 @@ function ∂W_∂h(r, h)
     return w1 + w2
 end
 
+function ∇W(a, b)
+    r_vec = b.x - a.x
+    r = norm(r_vec)
+    if r < 1e-6 || isnan(r)
+        return [0.,0.,0.]
+    end
+
+    h = a.h
+
+    q = abs(r/h)
+    σ = -1/24π * 1/h^4
+
+    if q < 1
+        w1 = σ * ( (3-q)^4 - 6*(2-q)^4 + 15*(1-q)^4 )
+    elseif 1<=q<2
+        w1 = σ *( (3-q)^4 - 6*(2-q)^4 )
+    elseif 2<=q< 3
+        w1 = σ * (3-q)^4
+    else
+        w1 = 0
+    end
+
+    return w1 * r_vec /r
+end
 # functions for NLsolve
 #
 
-function f!(F, x, p, particles)
-    F[1] = ρ(p, x[2], particles) - x[1]
+function f!(F, x, p, particles, distances)
+    F[1] = ρ(p, x[2], particles, distances) - x[1]
     F[2] = h(x[1], p.m) - x[2]
 end
 
-function j!(J, x, p, particles)
+
+function j!(J, x, p, particles, distances)
     # implement 
     #
     J[1,1] = -1
-    J[1,2] = sum([p1.m * ∂W_∂h(dist(p1.x, p.x), x[2]) for p1 in particles])
+    J[1,2] = sum([p1.m * ∂W_∂h(d, x[2]) for (p1, d) in zip(particles, distances)])
     J[2,1] = -η*(p.m)^(1/3) * 1/3 * (abs(x[1]))^(-4/3)
     J[2,2] = -1
 end

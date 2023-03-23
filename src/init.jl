@@ -50,7 +50,7 @@ const γ = 1.5
 
 function rand_r()
     p = 0.866rand() + 0.001
-    find_zero(x->p-∫ρ_bary(x), (0, R_virial))
+    find_zero(x->p-∫ρ_bary(x), (0, 2*R_virial))
 end
 
 const N_particles = 1000

@@ -6,6 +6,7 @@ using LinearAlgebra
 import ForwardDiff: derivative, gradient
 using StaticArrays
 using NearestNeighbors
+using Printf
 
 include("init.jl")
 include("particle.jl")
@@ -16,6 +17,8 @@ include("density.jl")
 
 
 const G = init.G
+const k_B = 7.26e-72 # Msun pc^2/yr^2 /K
+const R = 6.16e-15 # pc^2 /yr^2 / K
 
 
 
@@ -26,12 +29,32 @@ function main(dt=100e3, t_end=100e6)
     files = open_files(length(masses))
 
     for t in 0:dt:t_end
-        println(t)
+
+        print_time(t, t_end)
+
         record_masses(files, masses)
         update_particles!(masses, dt)
     end
 
     close_files(files)
+
+    println("closed files, completed!")
+    return 
+end
+
+function print_time(t, t_end)
+    if t < 1e6
+        s = @sprintf("%4.0f yr", t)
+    elseif t < 1e9
+        s = @sprintf("%4.0f Myr", t/1e6)
+    else
+        s = @sprintf("%4.0f Gyr", t/1e9)
+    end 
+
+    p = t/t_end*100
+    sp = @sprintf("%2.2f %% complete", p)
+
+    print("t =\t" * s * ", " * sp * "\r")
 end
 
 
@@ -39,12 +62,12 @@ function open_files(N)
     files = Vector()
     for i in 1:N
         fname = "data/mass$i.dat"
-        println(fname)
         touch("data/mass$i.dat")
         f = open("data/mass$i.dat", "w")
-        println(f, "x1,x2,x3,v1,v2,v3,ρ,h")
+        println(f, "x1,x2,x3,v1,v2,v3,ρ,h,T")
         push!(files, f)
     end
+    println("Opened files")
 
     return files
 end
@@ -59,7 +82,9 @@ function record_masses(files, masses)
         v3 = mass.v[3]
         ρ = mass.ρ
         h = mass.h
-        write(file, "$x1,$x2,$x3,$v1,$v2,$v3,$ρ,$h\n")
+        T = mass.T
+        write(file, "$x1,$x2,$x3,$v1,$v2,$v3,$ρ,$h,$T\n")
+        flush(file)
     end
 end
 
@@ -123,13 +148,20 @@ function update_particles!(particles, dt)
         p.neighbors = idxs[i][2:end]
         p.distances = dists[i][2:end]
 
-        p.ρ, p.h = density.ρ(p, particles[p.neighbors])
 
-        # for q in ps
-            # p.v -= q.m*(p.P/p.ρ^2 + q.P/q.ρ^2) * ∇W(p, q) * dt
-            # p.u -= p.P/p.ρ^2 * q.m * (v.*∇W.(p, q)) * dt
-        # end
-        # p.P = K*p.ρ^γ
+        p.ρ = density.ρ(p, particles[p.neighbors], p.distances)
+        p.h = density.h(p.ρ, p.m)
+
+        for (q, dist) in zip(particles[p.neighbors], p.distances)
+            # pressure
+            p.v .-= q.m*(p.P/p.ρ^2 + q.P/q.ρ^2) * density.∇W(p, q) * dt
+            #gravity
+            p.v .-= G*q.m/(dist)^3 * (q.x - p.x)
+            p.u += p.P/p.ρ^2 * q.m * sum((p.v-q.v) .* density.∇W(p, q)) * dt
+            p.T = p.u/(3/2 * k_B)
+            p.P = R*p.T*p.ρ 
+        end
+
     end
 
 end
