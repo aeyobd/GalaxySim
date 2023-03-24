@@ -7,12 +7,10 @@ using IntervalRootFinding
 using StaticArrays
 
 
-const ρ_max = 100
+const ρ_max = 1e-19
+const ρ_min = 1e-26
+const η = 1.
 
-function constraint!(x)
-    x[1] = max(0, x[1])
-    x[2] = max(0, x[2])
-end
 
 
 function itersolve(f, x0, range, maxiter=100, tol=1e-8)
@@ -26,7 +24,6 @@ function itersolve(f, x0, range, maxiter=100, tol=1e-8)
         x = max(x, range[1])
         x = min(x, range[2])
     end
-    println("failed")
     return x
 end
 
@@ -37,7 +34,7 @@ function solve(p, particles, distances)
         return ρ(p, hi, particles, distances)
     end
 
-    soln = itersolve(fi, p.ρ, [1e-6,1e3])
+    soln = itersolve(fi, p.ρ, [ρ_min, ρ_max])
     
     return soln
 end
@@ -76,7 +73,7 @@ end
 
 function W(r, h)
     if isnan(r) || isnan(h)
-        return NaN
+        throw(DomainError("r, h should be real, got $r, $h"))
     end
     return w(abs(r/h))/h^3
 end
@@ -99,17 +96,13 @@ function w(q)
     elseif 0 <=q<1
         return σ * ( (3-q)^5 - 6*(2-q)^5 + 15*(1-q)^5 )
     else
-        return NaN
-        throw(DomainError(w, "argument must be >= 0"))
+        throw(DomainError(w, "argument must be >= 0, got $q"))
     end
 end
 
 
 function ∂W_∂h(r, h)
-    if isnan(r) || isnan(h)
-        return NaN
-    end
-    q = abs(r/h)
+    q = r/h
     σ = 1/24π * r/h^5
 
     if q>=3
@@ -121,8 +114,7 @@ function ∂W_∂h(r, h)
     elseif 0 <=q<1
         w1 = σ * ( (3-q)^4 - 6*(2-q)^4 + 15*(1-q)^4 )
     else
-        return NaN
-        throw(DomainError(w, "argument must be >= 0"))
+        throw(DomainError(w, "argument must be >= 0, got r=$r, h=$h"))
     end
 
     w2 = -3/h * W(r, h)
@@ -132,7 +124,7 @@ end
 function ∇W(a, b)
     r_vec = b.x - a.x
     r = norm(r_vec)
-    if r < 1e-6 || isnan(r)
+    if r < 1e-6
         return [0.,0.,0.]
     end
 
@@ -147,8 +139,10 @@ function ∇W(a, b)
         w1 = σ *( (3-q)^4 - 6*(2-q)^4 )
     elseif 2<=q< 3
         w1 = σ * (3-q)^4
-    else
+    elseif 3 <= q
         w1 = 0
+    else
+        throw(DomainError(w, "argument must be >= 0, got r=$r, h=$h, $r_vec\n $a, $b"))
     end
 
     return w1 * r_vec /r
@@ -171,7 +165,6 @@ function j!(J, x, p, particles, distances)
     J[2,2] = -1
 end
 
-const η = 1.
 function h(ρ1, m)
     return η * (m/abs(ρ1))^(1/3)
 end

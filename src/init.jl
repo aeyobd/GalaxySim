@@ -8,19 +8,32 @@ import Base: rand
 
 include("particle.jl")
 
-const G = 4.4985e-15
+const G = 6.67e-8 # We use CGS for everything
+const Msun = 1.989e33
+const pc = 3.086e18
+const yr = 3.15e7
+const R = particle.R
 
+const N_particles = 100
 
-M_tot = 1e8
-M_bary = 1e6 #M_sun
-c = 10
-R_virial = 1e3
-Rs = R_virial/c
+const γ = 1.5 # dimensionless
+
+const M_tot = 1e8 * Msun
+const M_bary = 1e6 * Msun
+
+const R_virial = 1e3 * pc
+const c = 10 # dimensionless
+const Rs = R_virial/c
+const Rp = Rs
 
 A_NFW = (log(1+c) - c/(1+c))
 ρc = M_tot / ( 4π*R_virial^3 * A_NFW)
 
 function ρ_DM(r)
+    if r == 0
+        return 0
+    end
+
     x = r / Rs
     return ρc / (x * (1+x^2) )
 end
@@ -32,16 +45,20 @@ function v_virial(r)
 end
 
 function a_DM(r::Real)
+    if r == 0
+        return 0
+    end
     G * (M_tot/A_NFW) * (r/(r+Rs) - log(1+r/Rs))/r^2
 end
 
 function a_DM(x::Vector)
+    if norm(x) == 0
+        return zeros(3)
+    end
     return a_DM(norm(x)) * normalize(x)
 end
 
 
-const Rp = Rs
-const γ = 1.5
 ρ_bary(r) = (3-γ)/4π * (M_bary*Rp)/(r^γ * (r+Rp)^(4-γ))
 
 # radius sampler helper
@@ -53,7 +70,6 @@ function rand_r()
     find_zero(x->p-∫ρ_bary(x), (0, 2*R_virial))
 end
 
-const N_particles = 1000
 
 function rand_m()
     return rand(Normal(M_bary/N_particles, M_bary/N_particles * 0.05))
@@ -81,18 +97,18 @@ function rand_v(R)
     return rand_speed()*v_virial(R)*rand_unit_vector() 
 end
 
-function rand_particle()
+function rand_particle(i=0)
     R = rand_r()
     m = rand_m()
 
     x = rand_x(R)
     v = rand_v(R)
 
-    return particle.Particle(x=x, v=v, m=m)
+    return particle.Particle(x=x, v=v, m=m, id=i)
 end
 
 function rand_particles()
-    return [rand_particle() for _ in 1:N_particles]
+    return [rand_particle(i) for i in 1:N_particles]
 end
 
 

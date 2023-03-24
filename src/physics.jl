@@ -7,6 +7,8 @@ import ForwardDiff: derivative, gradient
 using StaticArrays
 using NearestNeighbors
 using Printf
+using Debugger
+using Glob
 
 include("init.jl")
 include("particle.jl")
@@ -17,13 +19,14 @@ include("density.jl")
 
 
 const G = init.G
-const k_B = 7.26e-72 # Msun pc^2/yr^2 /K
-const R = 6.16e-15 # pc^2 /yr^2 / K
+const R = init.R
+const yr = init.yr
+const pc = init.pc
+μ = 1
 
 
 
-
-function main(dt=100e3, t_end=100e6)
+function main(dt=100e3*yr, t_end=100e6*yr)
     masses = init.rand_particles()
 
     files = open_files(length(masses))
@@ -43,12 +46,12 @@ function main(dt=100e3, t_end=100e6)
 end
 
 function print_time(t, t_end)
-    if t < 1e6
-        s = @sprintf("%4.0f yr", t)
-    elseif t < 1e9
-        s = @sprintf("%4.0f Myr", t/1e6)
+    if t < 1e6*yr
+        s = @sprintf("%4.0f yr", t/yr)
+    elseif t < 1e9*yr
+        s = @sprintf("%4.0f Myr", t/1e6yr)
     else
-        s = @sprintf("%4.0f Gyr", t/1e9)
+        s = @sprintf("%4.0f Gyr", t/1e9yr)
     end 
 
     p = t/t_end*100
@@ -59,6 +62,11 @@ end
 
 
 function open_files(N)
+    # delete files
+    for file in glob("data/mass*.dat")
+        rm(file)
+    end
+
     files = Vector()
     for i in 1:N
         fname = "data/mass$i.dat"
@@ -74,9 +82,9 @@ end
 
 function record_masses(files, masses)
     for (file, mass) in zip(files, masses)
-        x1 = mass.x[1]
-        x2 = mass.x[2]
-        x3 = mass.x[3]
+        x1 = mass.x[1]/pc
+        x2 = mass.x[2]/pc
+        x3 = mass.x[3]/pc
         v1 = mass.v[1]
         v2 = mass.v[2]
         v3 = mass.v[3]
@@ -148,18 +156,23 @@ function update_particles!(particles, dt)
         p.neighbors = idxs[i][2:end]
         p.distances = dists[i][2:end]
 
-
         p.ρ = density.ρ(p, particles[p.neighbors], p.distances)
         p.h = density.h(p.ρ, p.m)
+
 
         for (q, dist) in zip(particles[p.neighbors], p.distances)
             # pressure
             p.v .-= q.m*(p.P/p.ρ^2 + q.P/q.ρ^2) * density.∇W(p, q) * dt
             #gravity
-            p.v .-= G*q.m/(dist)^3 * (q.x - p.x)
+            if dist != 0
+                p.v .-= G*q.m/(dist)^3 * (q.x - p.x)
+            end
+
             p.u += p.P/p.ρ^2 * q.m * sum((p.v-q.v) .* density.∇W(p, q)) * dt
-            p.T = p.u/(3/2 * k_B)
-            p.P = R*p.T*p.ρ 
+
+            p.T = p.u / (3/2 * R/μ)
+
+            p.P = R/μ * p.T * p.ρ 
         end
 
     end
