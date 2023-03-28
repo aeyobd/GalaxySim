@@ -22,10 +22,14 @@ Base.@kwdef mutable struct Particle
     # stars::Vector = []
     neighbors::Vector = []
     distances::Vector = []
-    T::Real = 1000
+    T::Real = 10000
     u::Real = 3/2*R*T
     P::Real = R/μ * ρ * T
     id::Real = 0
+
+    ρgas::Real = ρ
+    mgas::Real = m
+    mstar::Real = 0
 end
 
 

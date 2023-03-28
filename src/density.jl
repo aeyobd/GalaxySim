@@ -9,7 +9,7 @@ using StaticArrays
 
 const ρ_max = 1e-19
 const ρ_min = 1e-26
-const η = 1.
+const η = 0.1
 
 
 

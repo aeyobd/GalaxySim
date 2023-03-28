@@ -14,7 +14,7 @@ const pc = 3.086e18
 const yr = 3.15e7
 const R = particle.R
 
-const N_particles = 100
+N_particles = 300
 
 const γ = 1.5 # dimensionless
 
