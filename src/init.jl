@@ -1,20 +1,15 @@
-module init
+module Init
+
+export rand_particles, a_DM
 
 import LinearAlgebra: norm, normalize
 import SpecialFunctions: gamma
 import Roots: find_zero
-using Distributions
 import Base: rand
 
-include("particle.jl")
+using ..Constants
+using ..Particles
 
-const G = 6.67e-8 # We use CGS for everything
-const Msun = 1.989e33
-const pc = 3.086e18
-const yr = 3.15e7
-const R = particle.R
-
-N_particles = 300
 
 const γ = 1.5 # dimensionless
 
@@ -71,8 +66,8 @@ function rand_r()
 end
 
 
-function rand_m()
-    return rand(Normal(M_bary/N_particles, M_bary/N_particles * 0.05))
+function rand_m(N)
+    return M_bary/N*(1 + randn()*0.05)
 end
 
 function rand_unit_vector()
@@ -90,25 +85,25 @@ function rand_x(R)
 end
 
 function rand_speed()
-    rand(Normal(1, 0.3))
+    1 + 0.3*randn()
 end
 
 function rand_v(R)
     return rand_speed()*v_virial(R)*rand_unit_vector() 
 end
 
-function rand_particle(i=0)
+function rand_particle(i=0, N=1)
     R = rand_r()
-    m = rand_m()
+    m = rand_m(N)
 
     x = rand_x(R)
     v = rand_v(R)
 
-    return particle.Particle(x=x, v=v, m=m, id=i)
+    return Particle(x=x, v=v, m=m, id=i)
 end
 
-function rand_particles()
-    return [rand_particle(i) for i in 1:N_particles]
+function rand_particles(N)
+    return [rand_particle(i, N) for i in 1:N]
 end
 
 

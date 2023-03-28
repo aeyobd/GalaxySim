@@ -1,48 +1,25 @@
-module density
-export ∇, w
+module Density
+
+export ρ, h
+export W, ∂W_∂h, ∇W
 
 import LinearAlgebra: norm
-import NLsolve: nlsolve, newton
-using IntervalRootFinding
-using StaticArrays
 
+using ..Particles
+using ..Constants
 
-const ρ_max = 1e-19
-const ρ_min = 1e-26
-const η = 0.1
-
-
-
-function itersolve(f, x0, range, maxiter=100, tol=1e-8)
-    x = x0
-    for i in 1:maxiter
-        dx = f(x) - x
-        x += dx
-        if abs(dx/x) < tol
-            return x
-        end
-        x = max(x, range[1])
-        x = min(x, range[2])
-    end
-    return x
+function dist(p::Particle, q::Particle)
+    return norm(p.x .- q.x)
 end
 
 
-function solve(p, particles, distances)
-    function fi(x)
-        hi = h(x, p.m)
-        return ρ(p, hi, particles, distances)
-    end
-
-    soln = itersolve(fi, p.ρ, [ρ_min, ρ_max])
-    
-    return soln
+function ρ(p::Particle)
+    return solve(p, p.neighbors, p.distances)
 end
 
+h(p::Particle) = h(p.ρ, p.m)
 
-function ρ(p, particles, distances)
-    return solve(p, particles, distances)
-end
+h(ρ1, m) = η * (m/abs(ρ1))^(1/3)
 
 """
 x, m should be arraysh x is 3xN and m is N
@@ -56,17 +33,28 @@ function ρ(p0, h::Real, particles, distances)
     return s
 end
 
-function ρ(p0, h::Real, particles)
-    s = 0
-    for p in particles
-        d = dist(p.x, p0.x)
-        s += p.m * W(d, h)
+
+function solve(p::Particle, particles, distances)
+    soln =  itersolve(p.ρ, [ρ_min, ρ_max]) do x
+        h1 = h(x, p.m)
+        return ρ(p, h1, particles, distances)
     end
-    return s
+
+    return soln
 end
 
-function dist(ra, rb)
-    return norm(ra .- rb)
+function itersolve(f, x0, range, maxiter=100, tol=1e-4)
+    x = x0
+    for i in 1:maxiter
+        dx = f(x) - x
+        x += dx
+        if abs(dx/x) < tol
+            return x
+        end
+        x = max(x, range[1])
+        x = min(x, range[2])
+    end
+    return x
 end
 
 
@@ -146,27 +134,6 @@ function ∇W(a, b)
     end
 
     return w1 * r_vec /r
-end
-# functions for NLsolve
-#
-
-function f!(F, x, p, particles, distances)
-    F[1] = ρ(p, x[2], particles, distances) - x[1]
-    F[2] = h(x[1], p.m) - x[2]
-end
-
-
-function j!(J, x, p, particles, distances)
-    # implement 
-    #
-    J[1,1] = -1
-    J[1,2] = sum([p1.m * ∂W_∂h(d, x[2]) for (p1, d) in zip(particles, distances)])
-    J[2,1] = -η*(p.m)^(1/3) * 1/3 * (abs(x[1]))^(-4/3)
-    J[2,2] = -1
-end
-
-function h(ρ1, m)
-    return η * (m/abs(ρ1))^(1/3)
 end
 
 

@@ -1,143 +1,20 @@
 module Physics
-export main
+export dm_star, du_cool, du_cond, dv_G, dv_P, du_P
 
 
 using LinearAlgebra
-import ForwardDiff: derivative, gradient
-using StaticArrays
-using NearestNeighbors
-using Printf
 using Debugger
-using Glob
 
-include("init.jl")
-include("particle.jl")
-include("density.jl")
+using ..Particles
+using ..Init
+using ..Constants
+using ..Density
 
 # Lengths are pc, times are years
 # Masses in solar mass
 
 
-const G = init.G
-const R = init.R
-const yr = init.yr
-const pc = init.pc
-const Msun = init.Msun
-μ = 1
-ρ0 = 1.169e-25
-K0 = 4e7
-ϵ_eff = 0.01
 
-
-function main(dt=100e3*yr, t_end=100e6*yr)
-    masses = init.rand_particles()
-
-    files = open_files(length(masses))
-
-    for t in 0:dt:t_end
-
-        print_time(t, t_end)
-
-        record_masses(files, masses)
-        update_particles!(masses, dt)
-    end
-
-    close_files(files)
-
-    println("closed files, completed!")
-    return 
-end
-
-function print_time(t, t_end)
-    if t < 1e6*yr
-        s = @sprintf("%4.0f yr", t/yr)
-    elseif t < 1e9*yr
-        s = @sprintf("%4.0f Myr", t/1e6yr)
-    else
-        s = @sprintf("%4.0f Gyr", t/1e9yr)
-    end 
-
-    p = t/t_end*100
-    sp = @sprintf("%2.2f %% complete", p)
-
-    print("t =\t" * s * ", " * sp * "\r")
-end
-
-
-function open_files(N)
-    # delete files
-    for file in glob("data/mass*.dat")
-        rm(file)
-    end
-
-    files = Vector()
-    for i in 1:N
-        fname = "data/mass$i.dat"
-        touch("data/mass$i.dat")
-        f = open("data/mass$i.dat", "w")
-        println(f, "x1,x2,x3,v1,v2,v3,ρ,h,T,ms,f")
-        push!(files, f)
-    end
-    println("Opened files")
-
-    return files
-end
-
-function record_masses(files, masses)
-    for (file, mass) in zip(files, masses)
-        x1 = mass.x[1]/pc
-        x2 = mass.x[2]/pc
-        x3 = mass.x[3]/pc
-        v1 = mass.v[1] /100_000 # km/s
-        v2 = mass.v[2] /100_000 
-        v3 = mass.v[3] /100_000 
-        ρ = mass.ρ / Msun * pc^3
-        h = mass.h / pc
-        T = mass.T
-        mstar = mass.mstar/Msun
-        fstar = mass.mstar/mass.m
-        write(file, "$x1,$x2,$x3,$v1,$v2,$v3,$ρ,$h,$T,$mstar,$fstar\n")
-        flush(file)
-    end
-end
-
-function close_files(files)
-    close.(files)
-end
-
-
-function Φ(x, masses)
-    s = 0
-    for mass in masses
-        s += mass.m / norm(mass.x - x)
-    end
-
-    s *= -G
-    return s
-end
-
-
-function dΦ(x, others)
-    gradient(x) do x 
-        Φ(x, others)
-    end
-end
-
-
-function neighbors(particles::Vector)
-    x =  hcat(map(p->p.x, particles)...)
-    nearest_neighbors(x, 20)
-end
-
-"""
-get the nearist parlticles 
-x is array ndxnp
-"""
-function nearest_neighbors(x, k=10)
-    tree = KDTree(x)
-    idxs, dists = knn(tree, x, k, true)
-    return idxs, dists
-end
 
 
 """
@@ -150,69 +27,70 @@ e = u + v^2/2
 P=(γ-1)ρ u
 γ=5/3
 """
-function update_particles!(particles, dt)
-    idxs, dists = neighbors(particles)
-
-    for i in 1:length(particles)
-        p = particles[i]
-
-        p.x .+= p.v * dt
-        p.v .+= init.a_DM(p.x) * dt
-        p.neighbors = idxs[i][2:end]
-        p.distances = dists[i][2:end]
-
-        p.ρ = density.ρ(p, particles[p.neighbors], p.distances)
-        p.h = density.h(p.ρ, p.m)
-
-        p.mgas = p.m - p.mstar
-        p.ρgas = p.ρ * p.mgas/p.m
-
-        t_ff = sqrt(3π/(32 * G * p.ρgas))
-        ρmin = (p.T/6000)^3 * (p.mgas/1.3e6Msun)^(-2)
-        dm_star = p.ρgas > ρmin ? ϵ_eff * p.mgas/t_ff * dt : 0
-
-        p.mstar += dm_star
-            
-        ΔA = (p.m/p.ρ)^(2/3)
-
-        # feedback
-        Σsfr = dm_star/dt / ΔA
-        f_rad = 1
-        Jfuv = 1
-        Γ = 2e-26 * (f_rad*Σsfr*(2.5e-3*Msun/1e6pc^2/yr) + Jfuv/0.0024)
-        Λ = 2e-19 * exp(-1.184e-5/(p.T + 1000)) + 2.8e-28*sqrt(p.T)*exp(-92/p.T)
-
-        n = p.ρgas/p.mgas
-        du_cool = n*(n*Λ - Γ)
-
-        for (q, dist) in zip(particles[p.neighbors], p.distances)
-            # pressure
-            p.v .-= q.m*(p.P/p.ρ^2 + q.P/q.ρ^2) * density.∇W(p, q) * dt
-            #gravity
-            if dist != 0
-                p.v .-= G*q.m/(dist)^3 * (q.x - p.x)
-            end
-
-            ΔT = 2 * q.m/q.ρ * (p.T - q.T) * norm(density.∇W(p, q))/dist
-
-            p.u += p.P/p.ρ/p.ρgas * q.m * sum((p.v-q.v) .* density.∇W(p, q)) * dt
-            K = K0/(1 + ρ0/p.ρ)
-            p.u += K * ΔT
-
-
-        end
-        p.u -= du_cool
-        if p.u < 0
-            p.u = 0
-        end
-    
-        p.T = p.u / (3/2 * R/μ)
-
-        p.P = R/μ * p.T * p.ρ 
-
-    end
-
+function dm_star(p::Particle)
+    t_ff = sqrt(3π/(32 * G * p.ρgas))
+    ρmin = (p.T/6000)^3 * (p.mgas/1.3e6Msun)^(-2)
+    dms = p.ρgas > ρmin ? ϵ_eff * p.mgas/t_ff : 0
+    return dms
 end
+
+f_rad = 1
+Jfuv = 1
+Γ0 = 2e-26
+function du_cool(p::Particle)
+    dms = dm_star(p)
+    ΔA = (p.m/p.ρ)^(2/3)
+    dt = 1
+    Σsfr = dms/dt / ΔA
+    Γ = Γ0 * (f_rad*Σsfr*(2.5e-3*Msun/1e6pc^2/yr) + Jfuv/0.0024)
+    Λ = 2e-19 * exp(-1.184e-5/(p.T + 1000)) + 2.8e-28*sqrt(p.T)*exp(-92/p.T)
+
+    n = p.ρgas/p.mgas
+    du_cool = -n*(n*Λ - Γ)
+    return du_cool
+end
+
+function dv_P(p::Particle)
+    dv = zeros(3)
+    for q in p.neighbors
+        dv .-= q.m*(p.P/p.ρ^2 + q.P/q.ρ^2) * ∇W(p, q) 
+    end
+    return dv
+end
+
+function dv_G(p::Particle)
+    dv = zeros(3)
+    for (q, dist) in zip(p.neighbors, p.distances)
+        if dist != 0
+            dv .-= G*q.m/(dist)^3 * (q.x .- p.x)
+        else
+            @debug "particles atop eachother"
+        end
+    end
+    dv .+= a_DM(p.x) 
+
+    return dv
+end
+
+function du_cond(p::Particle)
+
+    ΔT = 0.
+    for (q, dist) in zip(p.neighbors, p.distances)
+        ΔT += 2 * q.m/q.ρ * (p.T - q.T) * norm(∇W(p, q))/dist
+    end
+    K = K0/(1 + ρ0/p.ρ)
+    return K * ΔT
+end
+
+
+function du_P(p)
+    du = 0.
+    for q in p.neighbors
+        du += p.P/p.ρ/p.ρgas * q.m * sum((p.v-q.v) .* ∇W(p, q))
+    end
+    return du
+end
+
 
 
 end
