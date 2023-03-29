@@ -1,5 +1,5 @@
 module Physics
-export dm_star, du_cool, du_cond, dv_G, dv_P, du_P
+export dm_star, du_cool, du_cond, dv_G, dv_P, du_P, dv_DM
 
 
 using LinearAlgebra
@@ -53,7 +53,7 @@ end
 function dv_P(p::Particle)
     dv = zeros(3)
     for q in p.neighbors
-        dv .-= q.m*(p.P/p.ρ^2 + q.P/q.ρ^2) * ∇W(p, q) 
+        dv .+= q.m*(p.P/p.ρ^2 + q.P/q.ρ^2) * ∇W(p, q) 
     end
     return dv
 end
@@ -67,10 +67,11 @@ function dv_G(p::Particle)
             @debug "particles atop eachother"
         end
     end
-    dv .+= a_DM(p.x) 
 
     return dv
 end
+
+dv_DM(p::Particle) = a_DM(p.x)
 
 function du_cond(p::Particle)
 
@@ -84,9 +85,10 @@ end
 
 
 function du_P(p)
-    du = 0.
+    du = 0
+
     for q in p.neighbors
-        du += p.P/p.ρ/p.ρgas * q.m * sum((p.v-q.v) .* ∇W(p, q))
+        du -= p.P/p.ρ/p.ρgas * q.m * (p.v-q.v) ⋅ ∇W(p, q)
     end
     return du
 end

@@ -2,7 +2,7 @@ module Constants
 
 export G, R, yr, pc, Msun
 export ρ_max, ρ_min, η
-export μ, ρ0, K0, ϵ_eff
+export μ, ρ0, K0, ϵ_eff, Nt
 
 
 const R = 8.314e7 #erg/K/mol
@@ -14,11 +14,12 @@ const yr = 3.15e7
 
 
 # limits on density to help solve
-const ρ_max = 1e-19
-const ρ_min = 1e-26
-const η = 0.1
+ρ_max = 1e-19
+ρ_min = 1e-26
+η = 10
 
 dt::Real = 1e3yr
+Nt = 300
 
 
 # mean mass in mp per particle of gas

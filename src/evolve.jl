@@ -9,9 +9,9 @@ using ..Init
 
 using NearestNeighbors
 using Printf
-using Glob
+using JLD2
 
-import DifferentialEquations: ODEProblem, solve, init
+import DifferentialEquations: ODEProblem, solve, init, TRBDF2
 #
 #
 #
@@ -27,69 +27,27 @@ function particle_system!(dU, U, p, t)
 end
 
 
-function evolve(N=100, t_end=1e6*yr)
+function evolve(N=100, t_end=1e9*yr)
     ps0 = rand_particles(N)
 
     U0 = particles_to_matrix(ps0)
     masses = [p.m for p in ps0]
+    @save "mass.jld" masses
 
     # Create an ODEProblem using the particle_system! function
     prob = ODEProblem(particle_system!, U0, (0., t_end), masses)
     #
     # # Solve the problem
-    integrator = init(prob)
+    integrator = init(prob, reltol=1e-3, saveat=LinRange(0., t_end, Nt))
 
     for i in integrator
         dt = i.t
-        t_now = integrator.t[end] / yr
-        print("t = $t_now \r")
+        t_now = integrator.t[end]
+        print_time(t_now, t_end)
     end
 
     return integrator.sol
 end
-
-
-function open_files(N)
-    # delete files
-    for file in glob("data/mass*.dat")
-        rm(file)
-    end
-
-    files = Vector()
-    for i in 1:N
-        fname = "data/mass$i.dat"
-        touch("data/mass$i.dat")
-        f = open("data/mass$i.dat", "w")
-        println(f, "x1,x2,x3,v1,v2,v3,ρ,h,T,ms,f")
-        push!(files, f)
-    end
-    println("Opened files")
-
-    return files
-end
-
-function record_masses(files, masses)
-    for (file, mass) in zip(files, masses)
-        x1 = mass.x[1]/pc
-        x2 = mass.x[2]/pc
-        x3 = mass.x[3]/pc
-        v1 = mass.v[1] /100_000 # km/s
-        v2 = mass.v[2] /100_000 
-        v3 = mass.v[3] /100_000 
-        ρ = mass.ρ / Msun * pc^3
-        h = mass.h / pc
-        T = mass.T
-        mstar = mass.mstar/Msun
-        fstar = mass.mstar/mass.m
-        write(file, "$x1,$x2,$x3,$v1,$v2,$v3,$ρ,$h,$T,$mstar,$fstar\n")
-        flush(file)
-    end
-end
-
-function close_files(files)
-    close.(files)
-end
-
 
 function matrix_to_particles(U, masses)
     N = length(masses)
@@ -100,6 +58,8 @@ function matrix_to_particles(U, masses)
                     mstar=U[i, 8],
                     m=masses[i])
             for i in 1:N]
+
+    calc!(ps)
     return ps
 end
 
@@ -118,13 +78,7 @@ function particles_to_matrix(ps)
     return U
 end
 
-function next_ps(particles::Vector{Particle})
-    p2 = deepcopy(particles)
-    update!(p2)
-    return p2
-end
-
-function update!(particles::Vector{Particle})
+function calc!(particles::Vector{Particle})
     idxs, dists = neighbors(particles)
 
     for i in 1:length(particles)
@@ -154,16 +108,25 @@ function update!(particles::Vector{Particle})
         p.T = p.u / (3/2 * R/μ)
         p.P = R/μ * p.T * p.ρ 
     end
+    return particles
+end
+
+function update!(particles::Vector{Particle})
 
     for p in particles
+        # dynamics
         p.x .+= p.v
         p.v .+= dv_G(p)
-        p.v .+= dv_P(p)
+        p.v .+= dv_DM(p)
 
+        # Hydrodynamics
+        p.v .+= dv_P(p)
+        p.u += du_P(p)
+
+        # stellar/astro
         p.mstar += dm_star(p)
         p.u += du_cool(p)
         p.u += du_cond(p)
-        p.u += du_P(p)
     end
 
     return particles
@@ -188,6 +151,23 @@ function nearest_neighbors(x, k=10)
     return idxs, dists
 end
 
+
+function print_time(t, t_end)
+    if t < 1e3*yr
+        s = @sprintf("%4.0f kyr", t/1e3yr)
+    elseif t < 1e6yr
+        s = @sprintf("%4.0f yr", t/yr)
+    elseif t < 1e9*yr
+        s = @sprintf("%4.0f Myr", t/1e6yr)
+    else
+        s = @sprintf("%4.0f Gyr", t/1e9yr)
+    end 
+
+    p = t/t_end*100
+    sp = @sprintf("%2.2f %% complete", p)
+
+    print("t =\t" * s * ", " * sp * "\r")
+end
 
 
 end
