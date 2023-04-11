@@ -2,161 +2,116 @@ module Evolve
 export update!, evolve
 
 using ..Physics
-using ..Particles
 using ..Constants
 using ..Density
 using ..Init
+using ..Particles
 
 using NearestNeighbors
 using Printf
 using JLD2
 
-import DifferentialEquations: ODEProblem, solve, init, TRBDF2
-#
-#
-#
-nvar = 3 + 3 + 1 + 1 
-
-
-function particle_system!(dU, U, p, t)
-    masses = p
-    ps = matrix_to_particles(U, masses)
-    update!(ps)
-    dU .= particles_to_matrix(ps)
-    dU .-= U
+function RK4()
 end
 
+function evolve(params)
+    ps = rand_particles(params["Np"])
+    t = 0
 
-function evolve(N=100, t_end=1e9*yr)
-    ps0 = rand_particles(N)
+    while t < params["Tmax"]
+        update_particles!(ps, t)
+        dt_min = get_dt(ps)
 
-    U0 = particles_to_matrix(ps0)
-    masses = [p.m for p in ps0]
-    @save "mass.jld" masses
-
-    # Create an ODEProblem using the particle_system! function
-    prob = ODEProblem(particle_system!, U0, (0., t_end), masses)
-    #
-    # # Solve the problem
-    integrator = init(prob, reltol=1e-3, saveat=LinRange(0., t_end, Nt))
-
-    for i in integrator
-        dt = i.t
-        t_now = integrator.t[end]
+        t += dt_min
         print_time(t_now, t_end)
     end
 
     return integrator.sol
 end
 
-function matrix_to_particles(U, masses)
-    N = length(masses)
+function update_particles!(ps, t)
+    balltree = BallTree([p.xs for p in ps])
 
-    ps =  [Particle(x=U[i, 1:3],
-                    v=U[i, 4:6],
-                    u=U[i, 7],
-                    mstar=U[i, 8],
-                    m=masses[i])
-            for i in 1:N]
+    for p in ps
+        if p.t + p.dt < t
+            continue
+        end
 
-    calc!(ps)
-    return ps
-end
-
-function particles_to_matrix(ps)
-    N = length(ps)
-    U = zeros(N, nvar)
-
-    for i in 1:N
-        p = ps[i]
-        U[i, 1:3] .= p.x
-        U[i, 4:6] .= p.v
-        U[i, 7] = p.u
-        U[i, 8] = p.mstar
-    end
-
-    return U
-end
-
-function calc!(particles::Vector{Particle})
-    idxs, dists = neighbors(particles)
-
-    for i in 1:length(particles)
-        p = particles[i]
-
-        p.neighbors = particles[idxs[i][2:end]]
-        p.distances = dists[i][2:end]
+        idxs = inrange(balltree, p.xs, p.h, true)
+        p.neighbors = ps[idxs]
 
         p.ρ = ρ(p)
         p.h = h(p)
 
-        if p.u < 0
-            p.u = 0
+        # if p.u < 0
+        #     p.u = 0
+        # end
+        # if p.mstar < 0
+        #     p.mstar = 0
+        # end
+
+        # p.mgas = p.m - p.mstar
+        # p.ρgas = p.ρ * p.mgas/p.m
+        # if p.ρgas < 0
+        #     p.ρgas = 0
+        #     p.mgas = 0
+        # end
+
+    end
+
+end
+
+function constraint!(U)
+    for i in 1:N(U)
+        if u(U) < 0
+            u!(U)[i] = 0
             @debug "negative T warning"
         end
-        if p.mstar < 0
-            p.mstar = 0
-        end
 
-        p.mgas = p.m - p.mstar
-        p.ρgas = p.ρ * p.mgas/p.m
-        if p.ρgas < 0
-            p.ρgas = 0
-            p.mgas = 0
-        end
-
-        p.T = p.u / (3/2 * R/μ)
-        p.P = R/μ * p.T * p.ρ 
     end
-    return particles
 end
 
-function update!(particles::Vector{Particle})
 
-    for p in particles
-        # dynamics
-        p.x .+= p.v
-        p.v .+= dv_G(p)
-        p.v .+= dv_DM(p)
-
-        # Hydrodynamics
-        p.v .+= dv_P(p)
-        p.u += du_P(p)
-
-        # stellar/astro
-        p.mstar += dm_star(p)
-        p.u += du_cool(p)
-        p.u += du_cond(p)
-    end
-
-    return particles
+function dp(p, dt)
+    ρ1 = calc_dρ(x(particle), U, masses, params)
 end
 
+
+function particle_system!(dU, U, p, t)
+    params, masses, dt = p
+
+    # needs something 
+
+    constraint!(U)
+
+    for i in 1:N(U)
+
+    end
+
+    xs!(dU, p.v)
+    vs!(dU, dv_G() + a_DM(x) + dv_P(x))
+    u!(dU, du_P() + du_cool() + du_cond())
+    ms!(dU, md_star)
+
+    return dU
+end
 
 function neighbors(particles::Vector)
     x =  hcat(map(p->p.x, particles)...)
-    nearest_neighbors(x, 20)
+    nearest_neighbors(x, Nn)
 end
-
-
 
 
 """
 get the nearist parlticles 
 x is array ndxnp
 """
-function nearest_neighbors(x, k=10)
-    tree = KDTree(x)
-    idxs, dists = knn(tree, x, k, true)
-    return idxs, dists
-end
-
 
 function print_time(t, t_end)
     if t < 1e3*yr
-        s = @sprintf("%4.0f kyr", t/1e3yr)
-    elseif t < 1e6yr
         s = @sprintf("%4.0f yr", t/yr)
+    elseif t < 1e6yr
+        s = @sprintf("%4.0f kyr", t/1e3yr)
     elseif t < 1e9*yr
         s = @sprintf("%4.0f Myr", t/1e6yr)
     else

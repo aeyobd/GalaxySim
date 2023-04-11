@@ -13,10 +13,6 @@ using ..Density
 # Lengths are pc, times are years
 # Masses in solar mass
 
-
-
-
-
 """
 Dρ/Dt = -ρ∇⋅v
 Dv/Dt = -1/ρ ∇P
@@ -27,7 +23,7 @@ e = u + v^2/2
 P=(γ-1)ρ u
 γ=5/3
 """
-function dm_star(p::Particle)
+function dm_star(p::Particle, config)
     t_ff = sqrt(3π/(32 * G * p.ρgas))
     ρmin = (p.T/6000)^3 * (p.mgas/1.3e6Msun)^(-2)
     dms = p.ρgas > ρmin ? ϵ_eff * p.mgas/t_ff : 0

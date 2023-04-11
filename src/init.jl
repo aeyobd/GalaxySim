@@ -24,6 +24,7 @@ const Rp = Rs
 A_NFW = (log(1+c) - c/(1+c))
 ρc = M_tot / ( 4π*R_virial^3 * A_NFW)
 
+
 function ρ_DM(r)
     if r == 0
         return 0
@@ -71,13 +72,8 @@ function rand_m(N)
 end
 
 function rand_unit_vector()
-    θ = rand() * 2π
-    ϕ = acos(2*rand() - 1)
-
-    x = sin(ϕ) * cos(θ)
-    y = cos(ϕ) * cos(θ)
-    z = sin(θ)
-    return [x,y,z]
+    r = randn(3)
+    return r / norm(r)
 end
 
 function rand_x(R)

@@ -1,0 +1,44 @@
+# all units are in cgs.
+# this is designed as a test for initial
+
+################# Simulation Parameters ###############
+N = 100         # number of simulation particles
+Nt = 300        # number of timesteps
+dMp = 0         # relative spread of particle masses
+Nn = 40         # number of neighbors to consider
+t_end = 1e7     # years to integrate for
+
+
+rho_max = 1e-15 # min and maximum densities allowed
+rho_min = 1e-30
+eta = 2         # density estimation parameter
+
+
+################# Initial Conditions #####################
+T0 = 1000       # initial temperature at the center
+v_0 = 0         # factor to multiply v by (initalized as v_viral)
+delta_v = 0     # how much scatter in v/
+
+# these are in Msun
+M_tot = 1e8
+M_bary = 1e6
+
+# in parsecs
+R_virial = 1e3
+c = 10          # density compactness parameters
+R_bary = 1e2    # baryonic dist radius
+gamma = 1.5     # baryonic compactness parameter
+
+
+
+################# Evolutionary Parameters ################
+K_cond = 4e7    # conduction constant
+sfe = 0.00      # star formation effeciency
+mu_0 = 1.4      # mean mass per gas particle in proton masses (mix of H and He)
+
+Jfuv = 0        # far UV energy density
+Gamma_0 = 0     # stellar feedback factor
+f_rad = 0       # radiative heating fraction
+Lambda_0 = 0    # cooling factor
+
+rho_0 = 1e10      # minimum star density for star form in protons/cm^3

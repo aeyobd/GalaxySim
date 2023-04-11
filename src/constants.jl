@@ -1,33 +1,34 @@
 module Constants
+using TOML
 
-export G, R, yr, pc, Msun
-export ρ_max, ρ_min, η
-export μ, ρ0, K0, ϵ_eff, Nt
-
-
-const R = 8.314e7 #erg/K/mol
-
-const G = 6.67e-8 # We use CGS for everything
-const Msun = 1.989e33
-const pc = 3.086e18
-const yr = 3.15e7
+export G, R_ig, yr, pc, Msun, m_p
+export get_params
+export T
 
 
-# limits on density to help solve
-ρ_max = 1e-19
-ρ_min = 1e-26
-η = 10
+# We use CGS for everything
+const R_ig = 8.314e7   #erg/K/mol
 
-dt::Real = 1e3yr
-Nt = 300
+const G = 6.67e-8 
+const Msun = 1.989e33  # grams
+const pc = 3.086e18    # cm
+const yr = 3.15e7      # seconds
+const m_p = 1.6726e-24 # grams
+
+T = Float64
+
+# except these are in natural units
+function get_params(filename)
+   params =  TOML.parsefile(filename)
+   params["M_bary"] *= Msun
+   params["M_tot"] *= Msun
+   params["R_virial"] *= pc
+   params["R_bary"] *= pc
+   params["rho_0"] *= m_p
+   q = params
+   return q
+end
 
 
-# mean mass in mp per particle of gas
-μ = 1
-
-# constants for state equtions
-ρ0 = 1.169e-25
-K0 = 4e7
-ϵ_eff = 0.01
 
 end

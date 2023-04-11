@@ -1,11 +1,11 @@
 module Particles
-export Particle
-
+export Particle, DParticle
 
 using Printf
 
 using ..Constants
 
+const μ = 1.4
 
 Base.@kwdef mutable struct Particle
     x::Vector
@@ -16,13 +16,13 @@ Base.@kwdef mutable struct Particle
     h::Real = 100 * pc
     W::Vector = []
     # 
-    # u::Vector = []
     # stars::Vector = []
+    #
     neighbors::Vector = []
     distances::Vector = []
     T::Real = 10000
-    u::Real = 3/2*R*T
-    P::Real = R/μ * ρ * T
+    u::Real = 3/2*R_ig*T
+    P::Real = R_ig/μ * ρ * T
     id::Real = 0
 
     ρgas::Real = ρ
@@ -36,11 +36,12 @@ function Base.show(io::IO, p::Particle)
 
     @printf io "x\t%0.2f\t%0.2e\t%0.2e\n"     (p.x/pc)...
     @printf io "v\t%0.2e\t%0.2e\t%0.2e\n"     p.v...
-    @printf io "ρ\t%0.2e\n"     p.ρ
-    @printf io "T\t%0.3e\n"     p.T
-    @printf io "u\t%0.2e\n"     p.u
-    @printf io "P\t%0.2e\n"     p.P
-    @printf io "ID\t%d\n"       p.id
+    @printf io "ρ\t%0.2e\n"                     p.ρ
+    @printf io "T\t%0.3e\n"                     p.T
+    @printf io "u\t%0.2e\n"                     p.u
+    @printf io "P\t%0.2e\n"                     p.P
+    @printf io "M_stars\t%0.2e\n"               p.mstar
+    @printf io "ID\t%d\n"                       p.id
 end
 
 function Base.copy(p::Particle)
@@ -51,13 +52,12 @@ function Base.copy(p::Particle)
     return p1
 end
 
-function empty_particles(n::Integer)
-    arr = []
-    for _ in 1:n
-        push!(arr, Particle(x=zeros(3), v=zeros(3), m=0.))
-    end
-
-    return arr
+function Base.show(io::IO, ::MIME"text/plain", p::Particle)
+    print(io, "particle at ")
+    @printf io "(%0.1f,%0.1f,%0.1f)  "     (p.x/pc)...
+    @printf io "T=%0.1e"                     p.T
+    return io
 end
+
 
 end

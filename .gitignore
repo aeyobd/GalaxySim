@@ -6,4 +6,6 @@ data/*
 
 *.jld
 
+.gif
+
 statprof

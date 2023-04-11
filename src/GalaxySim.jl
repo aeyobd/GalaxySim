@@ -14,6 +14,7 @@ include("init.jl")
 include("density.jl")
 include("physics.jl")
 include("evolve.jl")
+include("tree.jl")
 
 using .Constants
 using .Particles
@@ -21,18 +22,20 @@ using .Init
 using .Density
 using .Physics
 using .Evolve
+using .Tree
 
 # Lengths are pc, times are years
 # Masses in solar mass
 
 
 
-function main(N=100, t_end=1e6yr)
+function main(config_file="static_eq.toml")
     if isfile("result.jld")
         rm("result.jld")
     end
+    params = get_params(config_file)
 
-    soln = evolve(N, t_end)
+    soln = evolve(params)
     println("saving")
     jldsave("result.jld"; u=soln.u, t=soln.t)
     println("saved")

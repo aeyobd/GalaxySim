@@ -4,26 +4,33 @@ export ρ, h, W, ∇W, dist
 
 
 import LinearAlgebra: norm, normalize
-using ..Particles
 using ..Constants
+using ..Particles
 
 
 """
 Calculates the distance
-between the positions of two particles
+between two positions
 """
 function dist(p::Particle, q::Particle)
     return norm(p.x .- q.x)
 end
-
 
 function ρ(p::Particle)
     return solve(p, p.neighbors, p.distances)
 end
 
 h(p::Particle) = h(p.ρ, p.m)
-
 h(ρ1, m) = η * (m/abs(ρ1))^(1/3)
+
+function solve(p::Particle, particles, distances)
+    soln =  itersolve(p.ρ, [ρ_min, ρ_max]) do x
+        h1 = h(x, p.m)
+        return ρ(p, h1, particles, distances)
+    end
+
+    return soln
+end
 
 """
 x, m should be arraysh x is 3xN and m is N
@@ -38,16 +45,8 @@ function ρ(p0, h::Real, particles, distances)
 end
 
 
-function solve(p::Particle, particles, distances)
-    soln =  itersolve(p.ρ, [ρ_min, ρ_max]) do x
-        h1 = h(x, p.m)
-        return ρ(p, h1, particles, distances)
-    end
 
-    return soln
-end
-
-function itersolve(f, x0, range, maxiter=100, tol=1e-4)
+function itersolve(f, x0, range, maxiter=100, tol=1e-3)
     x = x0
     for i in 1:maxiter
         dx = f(x) - x
