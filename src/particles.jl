@@ -1,5 +1,6 @@
 module Particles
 export Particle, DParticle
+using StaticArrays
 
 using Printf
 
@@ -8,21 +9,22 @@ using ..Constants
 const μ = 1.4
 
 Base.@kwdef mutable struct Particle
-    x::Vector
-    v::Vector
-    m::Real
+    x::SVector{3,F}
+    v::SVector{3,F}
+    m::F
 
-    ρ::Real = 0.1 * Msun/pc^3
-    h::Real = 100 * pc
+    ρ::F = 0.1 * Msun/pc^3
+    h::F = 100 * pc
     W::Vector = []
     # 
     # stars::Vector = []
     #
     neighbors::Vector = []
     distances::Vector = []
-    T::Real = 10000
-    u::Real = 3/2*R_ig*T
-    P::Real = R_ig/μ * ρ * T
+
+    T::F = 10000
+    u::F = 3/2*R_ig*T
+    P::F = R_ig/μ * ρ * T
     id::Real = 0
 
     ρgas::Real = ρ

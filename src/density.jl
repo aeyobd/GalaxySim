@@ -16,21 +16,21 @@ function dist(p::Particle, q::Particle)
     return norm(p.x .- q.x)
 end
 
-function ρ(p::Particle)
-    return solve(p, p.neighbors, p.distances)
-end
-
-h(p::Particle) = h(p.ρ, p.m)
-h(ρ1, m) = η * (m/abs(ρ1))^(1/3)
-
-function solve(p::Particle, particles, distances)
-    soln =  itersolve(p.ρ, [ρ_min, ρ_max]) do x
-        h1 = h(x, p.m)
-        return ρ(p, h1, particles, distances)
+function ρ(p::Particle, params)
+    soln =  itersolve(p.ρ, [params.rho_min, params.rho_max], params.rho_maxiter, params.tol
+                     ) do x
+        h1 = h(x, p.m, params.eta)
+        return ρ(p, h1, p.neighbors, p.distances)
     end
 
     return soln
 end
+
+
+h(p::Particle, params) = h(p.ρ, p.m, params.eta)
+h(ρ1, m, η) = η*(m/abs(ρ1))^(1/3)
+
+
 
 """
 x, m should be arraysh x is 3xN and m is N

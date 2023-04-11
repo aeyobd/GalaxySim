@@ -11,11 +11,11 @@ const max_depth = 30 # Adjust the maximum depth of the octree according to your 
 mutable struct OctreeNode
     children::Union{Nothing, Vector{OctreeNode}}
     particle::Union{Nothing, Particle}
-    center::Vector{T}
-    center_of_mass::Vector{T}
+    center::Vector{F}
+    center_of_mass::Vector{F}
 
-    mass::T
-    size::T
+    mass::F
+    size::F
     depth::Int
 end
 
@@ -71,10 +71,10 @@ end
 
 
 
-function find_within_r(p::Particle, node::OctreeNode, r::T)
+function find_within_r(p::Particle, node::OctreeNode, r::F)
     result = Particle[]
 
-    function traverse(node::OctreeNode, r::T)
+    function traverse(node::OctreeNode, r::F)
         if node.children === nothing
             if node.particle !== nothing && node.particle != p && norm(node.particle.x - p.x) <= r
                 push!(result, node.particle)
@@ -101,12 +101,11 @@ function a_G(p::Particle, q::Particle)
     r_vec = q.x - p.x
     r_mag = norm(r_vec)
     eps = min(p.h, q.h)/2
-    force_mag = G * q.m / sqrt(r_mag^2 + eps^2)
-    return force_mag * r_vec / r_mag
+    return G*q.m * normalize(r_vec) / (norm(r_mag)^2 + eps^2)
 end
 
 
-function a_G(p::Particle, node::OctreeNode, theta::T)
+function a_G(p::Particle, node::OctreeNode, theta::F)
     if node.children === nothing
         if node.particle === nothing || node.particle == p
             return zeros(3)
@@ -149,8 +148,8 @@ end
 """ 
 Makes an octotree
 """
-function make_tree(particles::Vector{Particle})
-    size = 20*Init.Rp
+function make_tree(particles::Vector{Particle}, params)
+    size = 5*params.R_virial
 
     tree = create_octree_node(zeros(3), size, 1) # Assuming particles are in the unit cube
 

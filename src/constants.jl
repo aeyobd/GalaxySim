@@ -3,7 +3,7 @@ using TOML
 
 export G, R_ig, yr, pc, Msun, m_p
 export get_params
-export T
+export F
 
 
 # We use CGS for everything
@@ -15,7 +15,7 @@ const pc = 3.086e18    # cm
 const yr = 3.15e7      # seconds
 const m_p = 1.6726e-24 # grams
 
-T = Float64
+F = Float64
 
 # except these are in natural units
 function get_params(filename)
@@ -25,7 +25,10 @@ function get_params(filename)
    params["R_virial"] *= pc
    params["R_bary"] *= pc
    params["rho_0"] *= m_p
-   q = params
+   params["A_NFW"] = (log(1+params["c"]) - params["c"]/(1+params["c"]))
+   params["Rs"] = params["R_virial"]/params["c"]
+
+   q = NamedTuple{ Tuple(Symbol.(keys(params))) }(values(params))
    return q
 end
 

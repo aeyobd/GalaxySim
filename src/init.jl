@@ -3,7 +3,6 @@ module Init
 export rand_particles, a_DM
 
 import LinearAlgebra: norm, normalize
-import SpecialFunctions: gamma
 import Roots: find_zero
 import Base: rand
 
@@ -11,64 +10,61 @@ using ..Constants
 using ..Particles
 
 
-const γ = 1.5 # dimensionless
 
-const M_tot = 1e8 * Msun
-const M_bary = 1e6 * Msun
+"""
+Generates a list of random particles using
+the configuration stored in params
 
-const R_virial = 1e3 * pc
-const c = 10 # dimensionless
-const Rs = R_virial/c
-const Rp = Rs
+Parameters
+----------
+params: the parameters dictionary
+    in the dictionary:
 
-A_NFW = (log(1+c) - c/(1+c))
-ρc = M_tot / ( 4π*R_virial^3 * A_NFW)
+    N: the number of particles (int)
+    R_virial: the virial radius
+    R_bary: the radius of the baryonic profile
+    c: NFW profile compactness parameter
+    gamma: baryonic compactness parameter
 
+    M_tot: the total (DM) mass 
+    M_bary: the total baryonic (gas) mass 
 
-function ρ_DM(r)
-    if r == 0
-        return 0
-    end
+Returns
+    particles: Vector{Particle}
 
-    x = r / Rs
-    return ρc / (x * (1+x^2) )
-end
-
-v0_virial = √(G*M_tot/R_virial)
-function v_virial(r)
-    x = r/Rs
-    return v0_virial * √( 1/x * (log(1+c*x) - (c*x)/(1+c*x)) /A_NFW )
-end
-
-function a_DM(r::Real)
-    if r == 0
-        return 0
-    end
-    G * (M_tot/A_NFW) * (r/(r+Rs) - log(1+r/Rs))/r^2
-end
-
-function a_DM(x::Vector)
-    if norm(x) == 0
-        return zeros(3)
-    end
-    return a_DM(norm(x)) * normalize(x)
+"""
+function rand_particles(params)
+    return [rand_particle(i, params) for i in 1:params.N]
 end
 
 
-ρ_bary(r) = (3-γ)/4π * (M_bary*Rp)/(r^γ * (r+Rp)^(4-γ))
+
+function rand_particle(i, params)
+    r = rand_r(params)
+    m = rand_m(params)
+    x = rand_x(r, params)
+    v = rand_v(r, params)
+
+    return Particle(x=x, v=v, m=m, id=i)
+end
+
 
 # radius sampler helper
-∫ρ_bary(r) = r^(3-γ) * (r+Rp)^(γ-3)
-
-
-function rand_r()
-    p = 0.866rand() + 0.001
-    find_zero(x->p-∫ρ_bary(x), (0, 2*R_virial))
+∫ρ_bary(r::F, params) = r^(3 - params.gamma) * (r + params.R_bary)^(params.gamma-3)
+# ρ_bary(r) = (3-γ)/4π * (M_bary*Rp)/(r^γ * (r+Rp)^(4-γ))
+#
+function rand_r(params)
+    p = 0.99*rand() + 0.001
+    # use the integrated distribution to get parameter
+    find_zero(x->p - ∫ρ_bary(x, params), params.R_virial)
 end
 
+function rand_m(params)
+    return params.M_bary/params.N * (1 + randn()*params.sigma_M)
+end
 
-function rand_m(N)
-    return M_bary/N*(1 + randn()*0.05)
+function rand_x(r::F, params)
+    return r .* rand_unit_vector()
 end
 
 function rand_unit_vector()
@@ -76,31 +72,50 @@ function rand_unit_vector()
     return r / norm(r)
 end
 
-function rand_x(R)
-    return R .* rand_unit_vector()
+
+
+function rand_v(r::F, params)
+    return (1 + params.sigma_v*randn()) * v_virial(r, params) * rand_unit_vector() 
 end
 
-function rand_speed()
-    1 + 0.3*randn()
+
+function v_virial(r::F, params)
+    v0_virial = √(G*params.M_tot/params.R_virial)
+    x = r/params.Rs
+    return v0_virial * √( 1/x * (log(1 + params.c*x) - (params.c*x)/(1 + params.c*x)) 
+                         /params.A_NFW )
 end
 
-function rand_v(R)
-    return rand_speed()*v_virial(R)*rand_unit_vector() 
+
+
+
+function a_DM(r::F, params)
+    if r == 0
+        return 0
+    end
+    G*params.M_tot/params.A_NFW * 1/r^2 * (r/(r + params.Rs) - log(1 + r/params.Rs))
 end
 
-function rand_particle(i=0, N=1)
-    R = rand_r()
-    m = rand_m(N)
 
-    x = rand_x(R)
-    v = rand_v(R)
-
-    return Particle(x=x, v=v, m=m, id=i)
+function a_DM(x::Vector, params)
+    if norm(x) == 0
+        return zeros(3)
+    end
+    return a_DM(norm(x)) * normalize(x)
 end
 
-function rand_particles(N)
-    return [rand_particle(i, N) for i in 1:N]
-end
 
+
+
+function ρ_DM(r::F, params)
+    ρ_c = params["M_tot"] / ( 4π*params["R_virial"]^3 * params["A_NFW"])
+
+    if r == 0
+        return 0
+    end
+
+    x = r / params.Rs
+    return ρc / (x * (1+x^2) )
+end
 
 end

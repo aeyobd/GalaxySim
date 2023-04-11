@@ -3,21 +3,23 @@
 
 ################# Simulation Parameters ###############
 N = 100         # number of simulation particles
-Nt = 300        # number of timesteps
-dMp = 0         # relative spread of particle masses
-Nn = 40         # number of neighbors to consider
 t_end = 1e7     # years to integrate for
 
+theta = 0.01    # BH theta parameter
+eta = 2         # density estimation parameter
 
 rho_max = 1e-15 # min and maximum densities allowed
 rho_min = 1e-30
-eta = 2         # density estimation parameter
+dt_min = 1e3    # minimum timestep
+tol = 1e-3
+rho_maxiter = 20
 
 
 ################# Initial Conditions #####################
 T0 = 1000       # initial temperature at the center
 v_0 = 0         # factor to multiply v by (initalized as v_viral)
-delta_v = 0     # how much scatter in v/
+sigma_v = 0     # how much scatter in v/
+sigma_M = 0     # relative spread of particle masses
 
 # these are in Msun
 M_tot = 1e8
