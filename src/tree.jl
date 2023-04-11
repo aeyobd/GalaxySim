@@ -71,18 +71,19 @@ end
 
 
 
-function particles_within_range(p::Particle, node::OctreeNode, r::T)
+function find_within_r(p::Particle, node::OctreeNode, r::T)
     result = Particle[]
 
     function traverse(node::OctreeNode, r::T)
         if node.children === nothing
-            if node.particle !== nothing && node.particle != target && norm(node.particle.x - target.x) <= r
+            if node.particle !== nothing && node.particle != p && norm(node.particle.x - p.x) <= r
                 push!(result, node.particle)
             end
+            return
         end
 
         for child in node.children
-            if norm(child.center - target.x) - child.size <= r
+            if norm(child.center - p.x) - child.size <= r
                 traverse(child, r)
             end
         end
@@ -168,16 +169,26 @@ end
 function Base.show(io::IO, tree::OctreeNode)
     if tree.children == nothing 
         if tree.particle != nothing
-            print(io, "  "^(tree.depth))
+            print(io, "   |"^(tree.depth -1))
+            print(io, "--")
             show(io, "text/plain", tree.particle)
+            println(io)
         end
     else
-        print(io, "  "^(tree.depth))
-        print(io, "node $(tree.depth)  ")
-        @printf io "(%0.1f, %0.1f, %0.1f)\n"  (tree.center/pc)...
+        print(io, "   |"^(tree.depth-1))
+        print(io, "-")
+        @printf io " (%0.1f, %0.1f, %0.1f)\n"  (tree.center/pc)...
+
         for child in tree.children
-            print(io,  child)
+            if child.particle == nothing && child.children != nothing
+                print(io, "   |"^(tree.depth))
+                println(io)
+            end
+            if child.children != nothing || child.particle != nothing
+                print(io,  child)
+            end
         end
+
     end
 
     return io

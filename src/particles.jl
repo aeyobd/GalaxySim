@@ -54,8 +54,9 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", p::Particle)
     print(io, "particle at ")
-    @printf io "(%0.1f,%0.1f,%0.1f)  "     (p.x/pc)...
-    @printf io "T=%0.1e"                     p.T
+    @printf io "(%8.1f,%8.1f,%8.1f)    "     (p.x/pc)...
+    @printf io "T=%8.1e\t"                     p.T
+    @printf io "ID=%d"                       p.id
     return io
 end
 
