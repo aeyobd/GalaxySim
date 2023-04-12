@@ -3,9 +3,9 @@
 
 ################# Simulation Parameters ###############
 N = 100         # number of simulation particles
-t_end = 1e7     # years to integrate for
+t_end = 1e8     # years to integrate for
 
-theta = 0.01    # BH theta parameter
+theta = 0.05    # BH theta parameter
 eta = 2         # density estimation parameter
 
 rho_max = 1e-15 # min and maximum densities allowed

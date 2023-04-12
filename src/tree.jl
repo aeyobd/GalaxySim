@@ -6,6 +6,8 @@ using ..Init
 using LinearAlgebra
 using Printf
 
+export make_tree, a_G, find_within_r
+
 const max_depth = 30 # Adjust the maximum depth of the octree according to your problem
 
 mutable struct OctreeNode

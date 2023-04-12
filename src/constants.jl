@@ -27,6 +27,7 @@ function get_params(filename)
    params["rho_0"] *= m_p
    params["A_NFW"] = (log(1+params["c"]) - params["c"]/(1+params["c"]))
    params["Rs"] = params["R_virial"]/params["c"]
+   params["t_end"] *= yr
 
    q = NamedTuple{ Tuple(Symbol.(keys(params))) }(values(params))
    return q

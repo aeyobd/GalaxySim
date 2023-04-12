@@ -9,8 +9,8 @@ using ..Constants
 const μ = 1.4
 
 Base.@kwdef mutable struct Particle
-    x::SVector{3,F}
-    v::SVector{3,F}
+    x::MVector{3,F}
+    v::MVector{3,F}
     m::F
 
     ρ::F = 0.1 * Msun/pc^3
@@ -25,11 +25,14 @@ Base.@kwdef mutable struct Particle
     T::F = 10000
     u::F = 3/2*R_ig*T
     P::F = R_ig/μ * ρ * T
-    id::Real = 0
+    id::Int = 0
 
-    ρgas::Real = ρ
-    mgas::Real = m
-    mstar::Real = 0
+    ρgas::F = ρ
+    mgas::F = m
+    mstar::F = 0
+
+    t::F = 0
+    dt::F = 0
 end
 
 

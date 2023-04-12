@@ -13,8 +13,8 @@ include("particles.jl")
 include("init.jl")
 include("density.jl")
 include("physics.jl")
-include("evolve.jl")
 include("tree.jl")
+include("evolve.jl")
 
 using .Constants
 using .Particles

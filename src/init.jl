@@ -6,6 +6,8 @@ import LinearAlgebra: norm, normalize
 import Roots: find_zero
 import Base: rand
 
+using StaticArrays
+
 using ..Constants
 using ..Particles
 
@@ -97,11 +99,11 @@ function a_DM(r::F, params)
 end
 
 
-function a_DM(x::Vector, params)
+function a_DM(x::MVector{3,F}, params)
     if norm(x) == 0
         return zeros(3)
     end
-    return a_DM(norm(x)) * normalize(x)
+    return a_DM(norm(x), params) * normalize(x)
 end
 
 

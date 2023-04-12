@@ -1,47 +1,76 @@
 module Evolve
 export update!, evolve
 
-using ..Physics
-using ..Constants
-using ..Density
 using ..Init
+using ..Physics
+using ..Density
 using ..Particles
+using ..Tree
+using ..Constants
 
-using NearestNeighbors
 using Printf
 using JLD2
+using LinearAlgebra
+using Glob
 
 function RK4()
 end
 
 function evolve(params)
-    ps = rand_particles(params["Np"])
+    ps = rand_particles(params)
     t = 0
 
-    while t < params["Tmax"]
-        update_particles!(ps, t)
+    dt0 = 1yr
+
+    dt_min = dt0
+    files = open_files(params.N)
+
+    while t < params.t_end
+        update_particles!(ps, t, dt_min, params)
+        t += dt_min
+        print_time(t, params.t_end)
         dt_min = get_dt(ps)
 
-        t += dt_min
-        print_time(t_now, t_end)
+        record_particles(files, ps)
     end
 
-    return integrator.sol
+    close_files(files)
+
+    return 
 end
 
-function update_particles!(ps, t)
-    balltree = BallTree([p.xs for p in ps])
+function get_dt(ps)
+    return minimum([p.dt for p in ps])
+end
+
+
+function update_particles!(ps, t, dt, params)
+    tree = make_tree(ps, params)
 
     for p in ps
-        if p.t + p.dt < t
-            continue
+        p.neighbors = find_within_r(p, tree, p.h)
+        p.distances = [dist(p, q) for q in p.neighbors]
+
+        p.ρ = ρ(p, params)
+        p.h = h(p, params)
+
+        a = a_DM(p.x, params)
+        a = a_G(p, tree, params.theta)
+
+        p.v .+= a*dt
+        p.x .+= p.v * dt
+
+        if length(p.distances) > 0
+            p.dt = params.tol * 3/sqrt(8π * G * p.ρ)
+        else
+            p.dt = 1yr
         end
 
-        idxs = inrange(balltree, p.xs, p.h, true)
-        p.neighbors = ps[idxs]
-
-        p.ρ = ρ(p)
-        p.h = h(p)
+        if p.id == 1
+            println()
+            println(p.ρ)
+            println(p.dt)
+        end
 
         # if p.u < 0
         #     p.u = 0
@@ -72,40 +101,6 @@ function constraint!(U)
 end
 
 
-function dp(p, dt)
-    ρ1 = calc_dρ(x(particle), U, masses, params)
-end
-
-
-function particle_system!(dU, U, p, t)
-    params, masses, dt = p
-
-    # needs something 
-
-    constraint!(U)
-
-    for i in 1:N(U)
-
-    end
-
-    xs!(dU, p.v)
-    vs!(dU, dv_G() + a_DM(x) + dv_P(x))
-    u!(dU, du_P() + du_cool() + du_cond())
-    ms!(dU, md_star)
-
-    return dU
-end
-
-function neighbors(particles::Vector)
-    x =  hcat(map(p->p.x, particles)...)
-    nearest_neighbors(x, Nn)
-end
-
-
-"""
-get the nearist parlticles 
-x is array ndxnp
-"""
 
 function print_time(t, t_end)
     if t < 1e3*yr
@@ -123,6 +118,51 @@ function print_time(t, t_end)
 
     print("t =\t" * s * ", " * sp * "\r")
 end
+
+
+function open_files(N)
+    # delete files
+    for file in glob("data/mass*.dat")
+        rm(file)
+    end
+
+    files = Vector()
+    for i in 1:N
+        fname = "data/mass$i.dat"
+        touch("data/mass$i.dat")
+        f = open("data/mass$i.dat", "w")
+        println(f, "x1,x2,x3,v1,v2,v3,ρ,h,T,ms,f")
+        push!(files, f)
+    end
+    println("Opened files")
+
+    return files
+end
+
+
+function record_particles(files, masses)
+    for (file, mass) in zip(files, masses)
+        x1 = mass.x[1]/pc
+        x2 = mass.x[2]/pc
+        x3 = mass.x[3]/pc
+        v1 = mass.v[1] /100_000 # km/s
+        v2 = mass.v[2] /100_000 
+        v3 = mass.v[3] /100_000 
+        ρ = mass.ρ / Msun * pc^3
+        h = mass.h / pc
+        T = mass.T
+        mstar = mass.mstar/Msun
+        fstar = mass.mstar/mass.m
+        write(file, "$x1,$x2,$x3,$v1,$v2,$v3,$ρ,$h,$T,$mstar,$fstar\n")
+        flush(file)
+    end
+end
+
+function close_files(files)
+    close.(files)
+end
+
+
 
 
 end
