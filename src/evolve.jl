@@ -1,5 +1,5 @@
 module Evolve
-export update!, evolve
+export evolve
 
 using ..Init
 using ..Physics
@@ -13,65 +13,90 @@ using JLD2
 using LinearAlgebra
 using Glob
 
-function RK4()
-end
 
 function evolve(params)
     ps = rand_particles(params)
-    t = 0
-
-    dt0 = 1yr
-
-    dt_min = dt0
     files = open_files(params.N)
 
-    while t < params.t_end
-        update_particles!(ps, t, dt_min, params)
-        t += dt_min
-        print_time(t, params.t_end)
-        dt_min = get_dt(ps)
+    t = 0
+    dt = params.dt_min
 
-        record_particles(files, ps)
+    while t < params.t_end/params.dt_min
+
+        update_particles!(ps, t, dt, params)
+
+        print_time(t*params.dt_min, params.t_end)
+
+        if t % 64 == 0
+            record_particles(files, ps)
+        end
+
+        t += get_dt(ps, params)
     end
 
     close_files(files)
 
-    return 
+    return
 end
 
-function get_dt(ps)
-    return minimum([p.dt for p in ps])
+
+
+function get_dt(ps, params)
+    tm = minimum([p.dt for p in ps])
+
+    return 1
 end
+
 
 
 function update_particles!(ps, t, dt, params)
     tree = make_tree(ps, params)
 
     for p in ps
-        p.neighbors = find_within_r(p, tree, p.h)
-        p.distances = [dist(p, q) for q in p.neighbors]
-
-        p.ρ = ρ(p, params)
-        p.h = h(p, params)
-
-        a = a_DM(p.x, params)
-        a = a_G(p, tree, params.theta)
-
-        p.v .+= a*dt
-        p.x .+= p.v * dt
-
-        if length(p.distances) > 0
-            p.dt = params.tol * 3/sqrt(8π * G * p.ρ)
+        if p.dt < 2*params.dt_min
+            dt = params.dt_min
+            update!(p, tree, params.dt_min, params)
         else
-            p.dt = 1yr
+            factor = 2^floor(Int, log2(p.dt/params.dt_min))
+            if t % factor == 0
+                dt = factor*params.dt_min
+                update!(p, tree, dt, params)
+            end
         end
+    end
 
-        if p.id == 1
-            println()
-            println(p.ρ)
-            println(p.dt)
-        end
+end
 
+function update!(p::Particle, tree, dt, params)
+    p.neighbors = find_within_r(p, tree, p.h)
+    p.distances = [dist(p, q) for q in p.neighbors]
+
+    p.ρ = ρ(p, params)
+    p.h = h(p, params)
+
+    a = a_DM(p.x, params)
+    a_G!(a, p, tree, params.theta)
+
+    p.v .+= a * dt
+    p.x .+= p.v * dt
+
+    if length(p.distances) > 0
+        p.dt = max(params.tol * 3/sqrt(8π * G * p.ρ), params.dt_min)
+    else
+        p.dt = params.dt_min
+    end
+
+    p.t += p.t + dt
+
+
+    return p
+end
+
+
+"""
+
+"""
+function constraint!(p::Particle)
         # if p.u < 0
         #     p.u = 0
         # end
@@ -85,19 +110,6 @@ function update_particles!(ps, t, dt, params)
         #     p.ρgas = 0
         #     p.mgas = 0
         # end
-
-    end
-
-end
-
-function constraint!(U)
-    for i in 1:N(U)
-        if u(U) < 0
-            u!(U)[i] = 0
-            @debug "negative T warning"
-        end
-
-    end
 end
 
 
@@ -131,7 +143,7 @@ function open_files(N)
         fname = "data/mass$i.dat"
         touch("data/mass$i.dat")
         f = open("data/mass$i.dat", "w")
-        println(f, "x1,x2,x3,v1,v2,v3,ρ,h,T,ms,f")
+        println(f, "t,x1,x2,x3,v1,v2,v3,ρ,h,T,ms,f")
         push!(files, f)
     end
     println("Opened files")
@@ -151,9 +163,10 @@ function record_particles(files, masses)
         ρ = mass.ρ / Msun * pc^3
         h = mass.h / pc
         T = mass.T
+        t = mass.t / yr
         mstar = mass.mstar/Msun
         fstar = mass.mstar/mass.m
-        write(file, "$x1,$x2,$x3,$v1,$v2,$v3,$ρ,$h,$T,$mstar,$fstar\n")
+        write(file, "$t,$x1,$x2,$x3,$v1,$v2,$v3,$ρ,$h,$T,$mstar,$fstar\n")
         flush(file)
     end
 end

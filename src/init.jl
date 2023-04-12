@@ -56,9 +56,9 @@ end
 # ρ_bary(r) = (3-γ)/4π * (M_bary*Rp)/(r^γ * (r+Rp)^(4-γ))
 #
 function rand_r(params)
-    p = 0.99*rand() + 0.001
+    p = 0.98*rand() + 0.001
     # use the integrated distribution to get parameter
-    find_zero(x->p - ∫ρ_bary(x, params), params.R_virial)
+    find_zero(x->p - ∫ρ_bary(x, params), [1e-3*params.R_bary, 1e3*params.R_bary])
 end
 
 function rand_m(params)
@@ -99,7 +99,7 @@ function a_DM(r::F, params)
 end
 
 
-function a_DM(x::MVector{3,F}, params)
+function a_DM(x, params)
     if norm(x) == 0
         return zeros(3)
     end

@@ -2,8 +2,8 @@
 # this is designed as a test for initial
 
 ################# Simulation Parameters ###############
-N = 100         # number of simulation particles
-t_end = 1e8     # years to integrate for
+N = 1000         # number of simulation particles
+t_end = 1e7     # years to integrate for
 
 theta = 0.05    # BH theta parameter
 eta = 2         # density estimation parameter
