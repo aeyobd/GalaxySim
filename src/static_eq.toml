@@ -2,10 +2,10 @@
 # this is designed as a test for initial
 
 ################# Simulation Parameters ###############
-N = 1000         # number of simulation particles
-t_end = 1e7     # years to integrate for
+N = 100         # number of simulation particles
+t_end = 1e8     # years to integrate for
 
-theta = 0.05    # BH theta parameter
+theta = 0.1    # BH theta parameter
 eta = 2         # density estimation parameter
 
 rho_max = 1e-15 # min and maximum densities allowed
@@ -44,3 +44,8 @@ f_rad = 0       # radiative heating fraction
 Lambda_0 = 0    # cooling factor
 
 rho_0 = 1e10      # minimum star density for star form in protons/cm^3
+rho_cond = 0.05
+
+eta_eff = 0.01
+
+

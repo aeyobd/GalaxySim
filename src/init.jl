@@ -1,6 +1,6 @@
 module Init
 
-export rand_particles, a_DM
+export rand_particles
 
 import LinearAlgebra: norm, normalize
 import Roots: find_zero
@@ -61,13 +61,16 @@ function rand_r(params)
     find_zero(x->p - ∫ρ_bary(x, params), [1e-3*params.R_bary, 1e3*params.R_bary])
 end
 
+
 function rand_m(params)
     return params.M_bary/params.N * (1 + randn()*params.sigma_M)
 end
 
+
 function rand_x(r::F, params)
     return r .* rand_unit_vector()
 end
+
 
 function rand_unit_vector()
     r = randn(3)
@@ -75,9 +78,8 @@ function rand_unit_vector()
 end
 
 
-
 function rand_v(r::F, params)
-    return (1 + params.sigma_v*randn()) * v_virial(r, params) * rand_unit_vector() 
+    return params.v_0*(1 + params.sigma_v*randn()) * v_virial(r, params) * rand_unit_vector() 
 end
 
 
@@ -88,36 +90,16 @@ function v_virial(r::F, params)
                          /params.A_NFW )
 end
 
+# function ρ_DM(r::F, params)
+#     ρ_c = params["M_tot"] / ( 4π*params["R_virial"]^3 * params["A_NFW"])
+# 
+#     if r == 0
+#         return 0
+#     end
+# 
+#     x = r / params.Rs
+#     return ρc / (x * (1+x^2) )
+# end
 
-
-
-function a_DM(r::F, params)
-    if r == 0
-        return 0
-    end
-    G*params.M_tot/params.A_NFW * 1/r^2 * (r/(r + params.Rs) - log(1 + r/params.Rs))
-end
-
-
-function a_DM(x, params)
-    if norm(x) == 0
-        return zeros(3)
-    end
-    return a_DM(norm(x), params) * normalize(x)
-end
-
-
-
-
-function ρ_DM(r::F, params)
-    ρ_c = params["M_tot"] / ( 4π*params["R_virial"]^3 * params["A_NFW"])
-
-    if r == 0
-        return 0
-    end
-
-    x = r / params.Rs
-    return ρc / (x * (1+x^2) )
-end
 
 end

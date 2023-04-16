@@ -41,7 +41,8 @@ function ρ(p0, h::Real, particles, distances)
     for (p, d) in zip(particles, distances)
         s += p.m * W(d, h)
     end
-    return s
+    s += p0.m * W(0, h)
+    return s 
 end
 
 

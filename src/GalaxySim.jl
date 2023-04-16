@@ -1,6 +1,7 @@
 module GalaxySim
 
-export main, yr, pc, Msun
+export main, yr, pc, Msun, G
+export Particle
 
 
 using Printf
@@ -30,16 +31,10 @@ using .Tree
 
 
 function main(config_file="static_eq.toml")
-    if isfile("result.jld")
-        rm("result.jld")
-    end
-    params = get_params(config_file)
-
+    dir = @__DIR__
+    file = joinpath(dir, config_file)
+    params = get_params(file)
     soln = evolve(params)
-    println("saving")
-    jldsave("result.jld"; u=soln.u, t=soln.t)
-    println("saved")
-    return soln
 end
 
 

@@ -1,0 +1,63 @@
+# all units are in cgs.
+# this is designed as a test for initial
+
+################# Simulation Parameters ###############
+N = 2         # number of simulation particles
+t_end = 1e9     # years to integrate for
+
+theta = 0.5    # BH theta parameter
+eta = 1         # density estimation parameter
+
+rho_max = 1e-15 # min and maximum densities allowed
+rho_min = 1e-30
+dt_min = 1e3    # minimum timestep
+tol = 1e-3
+rho_maxiter = 20
+
+r_plummer = 0.0001 # Gravitational softening radius, in terms of h
+
+
+################# Initial Conditions #####################
+T0 = 0       # initial temperature at the center
+v_0 = 0         # factor to multiply v by (initalized as v_viral)
+sigma_v = 0     # how much scatter in v/
+sigma_M = 0     # relative spread of particle masses
+
+# these are in Msun
+M_tot = 0e8
+M_bary = 1e2
+
+# in parsecs
+R_virial = 1e3
+c = 10          # density compactness parameters
+R_bary = 1e2    # baryonic dist radius
+gamma = 1.5     # baryonic compactness parameter
+
+
+
+################# Evolutionary Parameters ################
+K_cond = 0e7    # conduction constant
+sfe = 0.00      # star formation effeciency
+mu_0 = 1.4      # mean mass per gas particle in proton masses (mix of H and He)
+
+Jfuv = 0        # far UV energy density
+Gamma_0 = 0     # stellar feedback factor
+f_rad = 0       # radiative heating fraction
+Lambda_0 = 0    # cooling factor
+
+rho_0 = 1e10      # minimum star density for star form in protons/cm^3
+rho_cond = 0.05
+
+eta_eff = 0.00
+
+
+################# Physics #########################
+
+phys_gravity = true
+phys_dm = false
+phys_pressure = false
+phys_cooling = false
+phys_star_formation = false
+phys_conduction = false
+
+

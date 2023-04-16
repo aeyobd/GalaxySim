@@ -1,5 +1,5 @@
 module Particles
-export Particle, DParticle
+export Particle
 using StaticArrays
 
 using Printf
@@ -22,7 +22,7 @@ Base.@kwdef mutable struct Particle
     neighbors::Vector = []
     distances::Vector = []
 
-    T::F = 10000
+    T::F = 0.1
     u::F = 3/2*R_ig*T
     P::F = R_ig/μ * ρ * T
     id::Int = 0
@@ -39,13 +39,14 @@ end
 function Base.show(io::IO, p::Particle)
     println(io)
 
-    @printf io "x\t%0.2f\t%0.2e\t%0.2e\n"     (p.x/pc)...
-    @printf io "v\t%0.2e\t%0.2e\t%0.2e\n"     p.v...
-    @printf io "ρ\t%0.2e\n"                     p.ρ
-    @printf io "T\t%0.3e\n"                     p.T
-    @printf io "u\t%0.2e\n"                     p.u
-    @printf io "P\t%0.2e\n"                     p.P
-    @printf io "M_stars\t%0.2e\n"               p.mstar
+    @printf io "x\t%8.2f\t%8.2f\t%8.2f\n"     (p.x/pc)...
+    @printf io "v\t%8.2e\t%8.2e\t%8.2e\n"     p.v...
+    @printf io "ρ\t%8.2e\n"                     p.ρ
+    @printf io "h\t%8.2e\n"                     (p.h/pc)
+    @printf io "T\t%8.3e\n"                     p.T
+    @printf io "u\t%8.2e\n"                     p.u
+    @printf io "P\t%8.2e\n"                     p.P
+    @printf io "M_stars\t%0.2f\n"               (p.mstar/Msun)
     @printf io "ID\t%d\n"                       p.id
 end
 

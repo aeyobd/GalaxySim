@@ -99,67 +99,38 @@ end
 """
 Gravitational acceleration between two masses
 """
-function a_G(p::Particle, q::Particle)
-    r_vec = q.x - p.x
-    r_mag = norm(r_vec)
-    eps = min(p.h, q.h)/2
-    return G*q.m * normalize(r_vec) / (norm(r_mag)^2 + eps^2)
-end
 
-function a_G!(a, p::Particle, q::Particle)
-    eps = min(p.h, q.h)/2
+function a_G!(a, p::Particle, q::Particle, params)
+    eps = min(p.h, q.h) * params.r_plummer 
     r = q.x .- p.x
     a .+= G*q.m * normalize(r)/(sum(r.*r) + eps^2)
     return a
 end
 
 
-function a_G!(a, p::Particle, node::OctreeNode, theta::F)
+function a_G!(a, p::Particle, node::OctreeNode, params)
     if node.children === nothing
         if node.particle === nothing || node.particle == p
         else
-            a_G!(a, p, node.particle)
+            a_G!(a, p, node.particle, params)
         end
         return a
     end
 
     distance = norm(node.center - p.x)
-    if node.size / distance < theta
+    if node.size / distance < params.theta
         # Node is sufficiently far away, use a single force calculation for the node
+        # Don't use softening here
         a .+= G * node.mass * (node.center_of_mass - p.x) / distance^3
     else
         # Node is not sufficiently far away, recurse to children
         for child in node.children
-            a_G!(a, p, child, theta)
+            a_G!(a, p, child, params)
         end
     end
 
     return a
 end
-
-function a_G(p::Particle, node::OctreeNode, theta::F)
-    if node.children === nothing
-        if node.particle === nothing || node.particle == p
-            return zeros(3)
-        else
-            return a_G(p, node.particle)
-        end
-    end
-
-    distance = norm(node.center - p.x)
-    if node.size / distance < theta
-        # Node is sufficiently far away, use a single force calculation for the node
-        return G * node.mass * (node.center_of_mass - p.x) / distance^3
-    else
-        # Node is not sufficiently far away, recurse to children
-        total_accel = zeros(3)
-        for child in node.children
-            total_accel .+= a_G(p, child, theta)
-        end
-        return total_accel
-    end
-end
-
 
 
 """
