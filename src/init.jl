@@ -53,7 +53,7 @@ end
 
 # radius sampler helper
 ∫ρ_bary(r::F, params) = r^(3 - params.gamma) * (r + params.R_bary)^(params.gamma-3)
-# ρ_bary(r) = (3-γ)/4π * (M_bary*Rp)/(r^γ * (r+Rp)^(4-γ))
+ρ_bary(r::F, params) = (3-params.gamma)/4π * (params.M_bary*params.R_bary)/(r^params.gamma * (r+params.R_bary)^(4-params.gamma))
 #
 function rand_r(params)
     p = 0.98*rand() + 0.001
