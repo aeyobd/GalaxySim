@@ -57,7 +57,7 @@ function dv_P(p::Particle, params)
     end
     dv = zeros(3)
     for q in p.neighbors
-        dv .+= q.m*(p.P/p.ρ^2 + q.P/q.ρ^2) * ∇W(p, q) 
+        dv .-= q.m*(p.P/p.ρ^2 + q.P/q.ρ^2) * ∇W(p, q) 
     end
     return dv
 end
@@ -83,7 +83,7 @@ function du_P(p, params)
     du = 0
 
     for q in p.neighbors
-        du -= p.P/p.ρ/p.ρgas * q.m * (p.v-q.v) ⋅ ∇W(p, q)
+        du += p.P/p.ρ^2* q.m * (p.v-q.v) ⋅ ∇W(p, q)
     end
     return du
 end

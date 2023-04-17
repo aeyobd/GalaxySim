@@ -1,0 +1,25 @@
+using Pkg
+
+Pkg.activate(".")
+
+using GalaxySim
+using LinearAlgebra
+
+
+function setup()
+    params = GalaxySim.Constants.get_params("src/static_eq.toml")
+    return params
+end
+
+
+function run()
+    params = setup()
+    GalaxySim.Evolve.evolve(params)
+    println("finished")
+end
+
+
+run()
+
+
+

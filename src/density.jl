@@ -17,7 +17,14 @@ function dist(p::Particle, q::Particle)
 end
 
 function ρ(p::Particle, params)
-    soln =  itersolve(p.ρ, [params.rho_min, params.rho_max], params.rho_maxiter, params.tol
+    if length(p.distances) < 1
+        p.h *= 2
+        return params.rho_min
+    end
+    h_min = minimum(p.distances)
+    ρ_min = ρ(p, h_min, p.neighbors, p.distances)
+
+    soln =  itersolve(p.ρ, [ρ_min, params.rho_max], params.rho_maxiter, params.tol
                      ) do x
         h1 = h(x, p.m, params.eta)
         return ρ(p, h1, p.neighbors, p.distances)

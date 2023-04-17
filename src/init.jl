@@ -2,7 +2,7 @@ module Init
 
 export rand_particles
 
-import LinearAlgebra: norm, normalize
+using LinearAlgebra
 import Roots: find_zero
 import Base: rand
 
@@ -75,6 +75,12 @@ end
 function rand_unit_vector()
     r = randn(3)
     return r / norm(r)
+end
+
+function rand_tangent(x)
+    y = randn(3)
+    tang = x × y
+    return normalize(tang)
 end
 
 
