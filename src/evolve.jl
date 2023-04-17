@@ -16,21 +16,8 @@ using Glob
 
 function evolve(params)
     ps = rand_particles(params)
-    files = open_files(params)
 
-    t = 0
-
-    while t < params.t_end
-        update_particles!(ps, int_t, dt, params)
-        print_time(t, params.t_end)
-        record_particles(files, ps, params)
-
-        t += get_dt(ps, params)
-    end
-
-    close_files(files)
-
-    return
+    evolve!(ps, params)
 end
 
 
@@ -38,13 +25,19 @@ function evolve!(ps, params)
     files = open_files(params)
 
     t = 0
+    i = 0
+
     while t < params.t_end
         update_particles!(ps, t, params)
-        print_time(t, params.t_end)
 
-        record_particles(files, ps, params)
+        # only save once every so many frames
+        if i % params.save_skip == 0
+            record_particles(files, ps, params)
+        end
 
         t += get_dt(ps, params)
+        i += 1
+        print_time(t, params.t_end)
     end
 
     close_files(files)
@@ -67,6 +60,7 @@ function update_particles!(ps, t, params)
     tree = make_tree(ps, params)
 
     update_ps = which_update(ps, t, params)
+
     for p in update_ps
         update_h_position!(p)
     end
@@ -157,11 +151,14 @@ function update_dt!(p::Particle, t, params)
         return
     end
 
-    dt = max(params.tol * 3/sqrt(8π * G * p.ρ), params.dt_min)
+    dt = params.tol * 3/sqrt(8π * G * p.ρ)
 
     dtn = minimum(q.dt for q in p.neighbors)
     dt = min(dt, params.dt_rel_max * dtn)
     dt = min(dt, params.dt_max)
+    dt = max(dt, params.dt_min)
+
+    p.dt = dt
     p.t += p.dt
 end
 
@@ -235,7 +232,6 @@ function record_particles(files, particles, params)
         for p in particles
             val = var(p)
             print(file, "$val,")
-
         end
 
         println(file)

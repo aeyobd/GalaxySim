@@ -23,7 +23,7 @@ function setup()
     M_tot = M(R_max)
     println("total mass")
     println(M_tot/Msun)
-    println(σ)
+    println(σ/1e5)
 
     m = M_tot/params.N
 
@@ -42,7 +42,6 @@ end
 
 function run()
     ps, params = setup()
-
     GalaxySim.Evolve.evolve!(ps, params)
     println("finished")
 end

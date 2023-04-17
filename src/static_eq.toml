@@ -32,7 +32,7 @@ adaptive = true
 
 
 ################# Initial Conditions #####################
-T0 = 10         # initial temperature at the center
+T0 = 100         # initial temperature at the center
 v_0 = 0         # factor to multiply v by (initalized as v_viral)
 sigma_v = 0     # how much scatter in v/
 sigma_M = 0     # relative spread of particle masses
