@@ -16,24 +16,16 @@ using Glob
 
 function evolve(params)
     ps = rand_particles(params)
-    files = open_files(params.N)
+    files = open_files(params)
 
-    int_t = 0
-    dt = params.dt_min
     t = 0
 
     while t < params.t_end
         update_particles!(ps, int_t, dt, params)
-
         print_time(t, params.t_end)
+        record_particles(files, ps, params)
 
-        if int_t % 64 == 0
-            record_particles(files, ps, params)
-        end
-
-        int_t += get_dt(ps, params)
-
-        t = int_t * params.dt_min
+        t += get_dt(ps, params)
     end
 
     close_files(files)
@@ -43,23 +35,16 @@ end
 
 
 function evolve!(ps, params)
-    files = open_files(params.N)
+    files = open_files(params)
 
-    int_t = 0
     t = 0
-    dt = params.dt_min
     while t < params.t_end
-        update_particles!(ps, int_t, dt, params)
+        update_particles!(ps, t, params)
         print_time(t, params.t_end)
 
-        if int_t % 64 == 0
-            record_particles(files, ps, params)
-        end
+        record_particles(files, ps, params)
 
-        t = int_t * params.dt_min
-        int_dt = get_dt(ps, params)
-        int_t += int_dt
-        dt = int_dt * params.dt_min
+        t += get_dt(ps, params)
     end
 
     close_files(files)
@@ -68,21 +53,20 @@ end
 
 
 function get_dt(ps, params)
-    tm = minimum([p.dt for p in ps])/params.dt_min
-    tm = min(tm, 2^32)
-
     if !params.adaptive
-        return 1
+        return params.dt_min
     end
-    return 1
+
+    tm = minimum([p.dt for p in ps])
+    return params.dt_min
 end
 
 
 
-function update_particles!(ps, t_int, dt, params)
+function update_particles!(ps, t, params)
     tree = make_tree(ps, params)
 
-    update_ps = which_update!(ps, t_int, dt, params)
+    update_ps = which_update(ps, t, params)
     for p in update_ps
         update_h_position!(p)
     end
@@ -96,13 +80,13 @@ function update_particles!(ps, t_int, dt, params)
         update_velocity!(p, tree, params)
         update_h_position!(p)
         update_mstar!(p, params)
-        update_dt!(p, t_int + 1, params)
+        update_dt!(p, t, params)
     end
 
 end
 
 
-function which_update(ps, t_int, dt, params)
+function which_update(ps, t, params)
     if !params.adaptive
         for p in ps
             p.dt = params.dt_min
@@ -110,21 +94,11 @@ function which_update(ps, t_int, dt, params)
         return ps
     end
 
-    ps_new = []
+    ps_new = Particle[]
 
     for p in ps
-        if p.dt < 2*params.dt_min
-            p.dt = params.dt_min
+        if p.t + p.dt < t
             push!(ps_new, p)
-        else
-            if factor > 2^params.dt_pow_max
-                factor = 2^params.dt_pow_max
-            end
-
-            if t_int % factor == 0
-                p.dt = factor*params.dt_min
-                push!(ps_new, p)
-            end
         end
     end
 
@@ -142,9 +116,11 @@ function setup!(p::Particle, tree, params)
 end
 
 
+
 function update_h_position!(p::Particle)
     p.x .+= p.v * p.dt/2
 end
+
 
 
 function update_energy!(p::Particle, params)
@@ -156,6 +132,8 @@ function update_energy!(p::Particle, params)
     p.P = R_ig/params.mu_0 * p.ρ * p.T
 end
 
+
+
 function update_velocity!(p::Particle, tree, params)
     a = a_DM(p.x, params)
     a .+= dv_P(p, params)
@@ -165,39 +143,26 @@ function update_velocity!(p::Particle, tree, params)
 end
 
 
+
 function update_mstar!(p::Particle, params)
     p.mstar += dm_star(p, params)
 end
 
 
-function update_dt!(p::Particle, t_int, params)
+
+function update_dt!(p::Particle, t, params)
     if length(p.distances) < 1
         p.dt = params.dt_min
+        p.t += p.dt
         return
     end
 
     dt = max(params.tol * 3/sqrt(8π * G * p.ρ), params.dt_min)
 
     dtn = minimum(q.dt for q in p.neighbors)
-    dt = min(dt, 2^params.dt_rel_pow_max * dtn)
-
-    if dt < 2*params.dt_min
-        dt = params.dt_min
-        return 
-    end
-
-    factor = 2^floor(Int, log2(dt/params.dt_min))
-    if factor > 2^params.dt_pow_max
-        factor = 2^params.dt_pow_max
-    end
-
-    if t_int % factor == 0
-        p.dt = factor * params.dt_min
-    else
-        factor = 2^Base.trailing_zeros(t_int % factor)
-        p.dt = factor * params.dt_min
-    end
-
+    dt = min(dt, params.dt_rel_max * dtn)
+    dt = min(dt, params.dt_max)
+    p.t += p.dt
 end
 
 
@@ -221,42 +186,64 @@ function print_time(t, t_end)
 end
 
 
-function open_files(N)
+
+FILE_NAMES = (
+    "t",
+    "x1", "x2", "x3",
+    "v1", "v2", "v3",
+    "rho",
+    "h",
+    "T",
+    "mstar"
+   )
+
+VAR_NAMES = (p->p.t/yr,
+             p->p.x[1]/pc, p->p.x[2]/pc, p->p.x[3]/pc,
+             p->p.v[1], p->p.v[2], p->p.v[3],    
+             p->p.ρ,
+             p->p.h/pc,
+             p->p.T,
+             p->p.mstar,
+            )
+
+function open_files(params)
+    mkpath(params.name)
+
     # delete files
-    for f in glob("data/*.dat")
-        rm(f)
+    for file in glob("$(params.name)/*.dat")
+        rm(file)
     end
+
     files = Vector()
-    for i in 1:N
-        fname = "data/mass$i.dat"
-        f = open(fname, "w")
-        println(f, "t,x1,x2,x3,v1,v2,v3,ρ,h,T,ms,f")
-        push!(files, f)
+
+    for basename in FILE_NAMES
+        fname = "$(params.name)/$(basename).dat"
+        file = open(fname, "w")
+        push!(files, file)
     end
+
     println("Opened files")
 
     return files
 end
 
 
-function record_particles(files, masses, params)
-    for (file, mass) in zip(files, masses)
-        x1 = mass.x[1]/pc
-        x2 = mass.x[2]/pc
-        x3 = mass.x[3]/pc
-        v1 = mass.v[1] /100_000 # km/s
-        v2 = mass.v[2] /100_000 
-        v3 = mass.v[3] /100_000 
-        ρ = mass.ρ / Msun * pc^3
-        h = mass.h / pc
-        T = mass.T
-        t = mass.t * params.dt_min / yr
-        mstar = mass.mstar/Msun
-        fstar = mass.mstar/mass.m
-        write(file, "$t,$x1,$x2,$x3,$v1,$v2,$v3,$ρ,$h,$T,$mstar,$fstar\n")
-        flush(file)
+
+
+function record_particles(files, particles, params)
+    for (file, var) in zip(files, VAR_NAMES)
+        for p in particles
+            val = var(p)
+            print(file, "$val,")
+
+        end
+
+        println(file)
     end
+
 end
+
+
 
 function close_files(files)
     close.(files)

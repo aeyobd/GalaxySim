@@ -1,20 +1,30 @@
 # all units are in cgs.
-# this is designed as a test for initial
+# this is designed as a test for 
+# gravity and pressure rules, using an approximation
+# of the isothermal sphere for an ideal gas
 
 ################# Simulation Parameters ###############
-N = 400         # number of simulation particles
+name = "static_eq" # name to save to
+seed = 127
+save_skip = 25  # number of frames to skip when saving
+
+N = 100         # number of simulation particles
 t_end = 1e7     # years to integrate for
+
+dt_min = 1e3    # minimum timestep
+dt_max = 1e5
+dt_rel_max = 10
+
 
 theta = 0.05    # BH theta parameter
 eta = 2         # density estimation parameter
 
-rho_max = 1e-15 # min and maximum densities allowed
-rho_min = 1e-30
-dt_min = 1e3    # minimum timestep
-dt_pow_max = 16
-dt_rel_pow_max = 4
+# density estimation parameters
 tol = 1e-3
 rho_maxiter = 20
+rho_max = 1e-15 # min and maximum densities allowed
+rho_min = 1e-30
+
 
 r_plummer = 0.1 # Gravitational softening radius, in terms of h
 

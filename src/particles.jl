@@ -13,12 +13,11 @@ Base.@kwdef mutable struct Particle
     v::MVector{3,F}
     m::F
 
+
     ρ::F = 0.1 * Msun/pc^3
     h::F = 100 * pc
-    W::Vector = []
-    # 
+
     # stars::Vector = []
-    #
     neighbors::Vector = []
     distances::Vector = []
 
@@ -33,6 +32,20 @@ Base.@kwdef mutable struct Particle
 
     t::F = 0
     dt::F = 0
+
+    # evolutionary parameters
+    dv_dt::MVector{3, F} = zeros(3)
+    dmgas_dt::F = 0
+    dρ_dt::F = 0
+    du_dt::F = 0
+end
+
+
+function interpolate(p::Particle, symbol, t)
+    f = getproperty(p, :symbol)
+    df_dt = getproperty(p, :"d$(symbol)_dt")
+    dt = t - p.t
+    return f + df_dt * dt
 end
 
 
