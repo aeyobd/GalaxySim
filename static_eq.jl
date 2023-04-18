@@ -19,10 +19,13 @@ function setup()
     ρ(r) = C / r^2
     M(r) = 4*π * C * r
 
-    R_max = 100*pc
+    R_max = 30*pc
     M_tot = M(R_max)
     println("total mass")
     println(M_tot/Msun)
+    println("mean density")
+    ρ_mean = M_tot/R_max^3 / m_p
+    println(ρ_mean)
     println(σ/1e5)
 
     m = M_tot/params.N

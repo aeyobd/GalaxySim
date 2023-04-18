@@ -11,6 +11,7 @@ using JLD2
 
 include("constants.jl")
 include("particles.jl")
+include("gal_files.jl")
 include("init.jl")
 include("density.jl")
 include("physics.jl")
@@ -19,6 +20,7 @@ include("evolve.jl")
 
 using .Constants
 using .Particles
+using .GalFiles
 using .Init
 using .Density
 using .Physics

@@ -1,6 +1,7 @@
 module Physics
 export dm_star, du_cool, du_cond, dv_P, du_P
-export a_DM
+export a_DM, cs
+export du_visc, dv_visc
 
 
 using LinearAlgebra
@@ -55,9 +56,10 @@ function dv_P(p::Particle, params)
     if !params.phys_pressure
         return 0.
     end
+
     dv = zeros(3)
     for q in p.neighbors
-        dv .-= q.m*(p.P/p.ρ^2 + q.P/q.ρ^2) * ∇W(p, q) 
+        dv .+= -q.m*(p.P/p.ρ^2 + q.P/q.ρ^2) * ∇W(p, q) 
     end
     return dv
 end
@@ -69,7 +71,7 @@ function du_cond(p::Particle, params)
     end
     ΔT = 0.
     for (q, dist) in zip(p.neighbors, p.distances)
-        ΔT += 2 * q.m/q.ρ * (p.T - q.T) * norm(∇W(p, q))/dist
+        ΔT += 2* q.m/q.ρ * (p.T - q.T) * norm(∇W(p, q))/dist
     end
     K = params.K_cond/(1 + params.rho_cond*m_p/p.ρ)
     return K * ΔT
@@ -86,6 +88,71 @@ function du_P(p, params)
         du += p.P/p.ρ^2* q.m * (p.v-q.v) ⋅ ∇W(p, q)
     end
     return du
+end
+
+function cs(p)
+    c =  sqrt(5/3 * R_ig * p.T/p.μ)
+    return c
+end
+
+
+function du_visc(p, params)
+    if !params.phys_visc
+        return 0.
+    end
+
+    du = 0.
+
+    α = 1
+    β = 2
+    α_u = 1
+
+    for q in p.neighbors
+        v_ab = q.v .- p.v
+        r_ab = q.x .- p.x
+
+        r_hat = normalize(r_ab)
+        vr = v_ab ⋅ r_hat
+
+        F_mean = F_ab(p, q)
+        ρ_mean = (p.ρ + q.ρ) / 2
+        v_sig = (vr<=0) ? 1/2 * (p.c + q.c - β*vr) : 0
+        v_u_sig = sqrt(abs(p.P - q.P)/ρ_mean)
+
+        du += -q.m/ρ_mean * (1/2*α*vr^2 + α_u*v_u_sig*(p.u - q.u)) * F_mean
+    end
+
+    return du
+end
+
+
+function dv_visc(p, params)
+    if !params.phys_visc
+        return zeros(3)
+    end
+
+    dv = zeros(3)
+
+    α = 1
+    β = 2
+
+    for q in p.neighbors
+        v_ab = q.v .- p.v
+        r_ab = q.x .- p.x
+
+        r_hat = normalize(r_ab)
+        vr = v_ab ⋅ r_hat
+
+        F_mean = F_ab(p, q)
+        ρ_mean = (p.ρ + q.ρ) / 2
+        v_sig = (vr<=0) ? 1/2 * (p.c + q.c - β*vr) : 0
+
+        dv .+= -α * q.m/ρ_mean * v_sig * vr*F_mean * r_hat 
+    end
+
+    # println(dv * p.dt)
+
+    return dv
 end
 
 

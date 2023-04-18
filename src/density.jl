@@ -1,6 +1,6 @@
 module Density
 
-export ρ, h, W, ∇W, dist
+export ρ, h, W, ∇W, dist, F_ab
 
 
 import LinearAlgebra: norm, normalize
@@ -22,11 +22,14 @@ function ρ(p::Particle, params)
         return params.rho_min
     end
     h_min = minimum(p.distances)
+    h_max = params.h_max
     ρ_min = ρ(p, h_min, p.neighbors, p.distances)
 
     soln =  itersolve(p.ρ, [ρ_min, params.rho_max], params.rho_maxiter, params.tol
                      ) do x
         h1 = h(x, p.m, params.eta)
+        h1 = max(h_min, h1)
+        h1 = min(h_max, h1)
         return ρ(p, h1, p.neighbors, p.distances)
     end
 
@@ -62,6 +65,8 @@ function itersolve(f, x0, range, maxiter=100, tol=1e-3)
         if abs(dx/x) < tol
             return x
         end
+
+        # apply range limits
         x = max(x, range[1])
         x = min(x, range[2])
     end
@@ -80,33 +85,40 @@ end
 
 
 """
-Welemnd kernel function
+Wendland kernel function
 see https://academic.oup.com/mnras/article/425/2/1068/1187211
 """
 function w(q)
     σ = 495/32π
     c1 = max(0., 1-q)^6
-    return σ * c1 * (1 + 6q + 35/3 * q^2)
+    return σ * c1 * (1 + 6q + 35/3*q^2)
 end
 
 function dw(q)
-    σ = 495/32π
+    σ = -495/32π
     c2 = max(0, 1-q)^5
-    return σ * 56/3 * c2 * (q + 5q^2)
+    return σ * 56/3 * c2 * (q + 5*q^2)
 end
 
 
 function ∇W(a::Particle, b::Particle)
     r = dist(a, b)
-    if r < 1e-6
-        return zeros(3)
-    end
 
     r_hat = normalize(a.x .- b.x)
 
     h = a.h
     q = abs(r/h)
     return dw(q) * r_hat / h^4
+end
+
+
+function F_ab(a::Particle, b::Particle)
+    r = dist(a, b)
+    q1 = abs(r/a.h)
+    q2 = abs(r/b.h)
+    F1 = dw(q1)/a.h^4
+    F2 = dw(q2)/b.h^4
+    return (F1 + F2)/2
 end
 
 

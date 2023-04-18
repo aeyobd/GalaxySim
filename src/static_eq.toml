@@ -5,10 +5,10 @@
 
 ################# Simulation Parameters ###############
 name = "static_eq" # name to save to
-seed = 127
+# seed = 127
 save_skip = 25  # number of frames to skip when saving
 
-N = 100         # number of simulation particles
+N = 500         # number of simulation particles
 t_end = 1e7     # years to integrate for
 
 dt_min = 1e3    # minimum timestep
@@ -21,12 +21,12 @@ eta = 2         # density estimation parameter
 
 # density estimation parameters
 tol = 1e-3
-rho_maxiter = 20
+rho_maxiter = 40
 rho_max = 1e-15 # min and maximum densities allowed
 rho_min = 1e-30
 
 
-r_plummer = 0.1 # Gravitational softening radius, in terms of h
+r_plummer = 0.5 # Gravitational softening radius, in terms of h
 
 adaptive = true
 

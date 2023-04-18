@@ -72,26 +72,49 @@ function insert_particle!(node::OctreeNode, particle::Particle, depth::Int)
 end
 
 
+"""
+finds all particles within R of the target particle
+
+If nothing is close, returns the nearest
+"""
 
 function find_within_r(p::Particle, node::OctreeNode, r::F)
     result = Particle[]
+    min_distance = Inf
+    min_particle = nothing
 
     function traverse(node::OctreeNode, r::F)
         if node.children === nothing
-            if node.particle !== nothing && node.particle != p && norm(node.particle.x - p.x) <= r
-                push!(result, node.particle)
+            if node.particle !== nothing && node.particle != p 
+                d = norm(node.particle.x - p.x)
+                if d <= r
+                    push!(result, node.particle)
+                    min_distance = -1 # don't need this anymore
+                elseif min_distance > 0 && d <= min_distance
+                    min_distance = d
+                    min_particle = node.particle
+                end
             end
             return
         end
 
         for child in node.children
-            if norm(child.center - p.x) - child.size <= r
+            d = norm(child.center - p.x) - child.size
+            if  d <= r || (min_distance > 0 && d <= min_distance)
                 traverse(child, r)
             end
         end
     end
 
     traverse(node, r)
+
+    if min_distance > 0
+        if min_particle == nothing
+            println("oops")
+        end
+        return [min_particle]
+    end
+
     return result
 end
 

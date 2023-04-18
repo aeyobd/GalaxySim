@@ -1,5 +1,6 @@
 module Evolve
-export evolve
+
+export evolve, evolve!, setup!
 
 using ..Init
 using ..Physics
@@ -7,11 +8,9 @@ using ..Density
 using ..Particles
 using ..Tree
 using ..Constants
+using ..GalFiles
 
-using Printf
-using JLD2
 using LinearAlgebra
-using Glob
 
 
 function evolve(params)
@@ -26,18 +25,17 @@ function evolve!(ps, params)
 
     t = 0
     i = 0
-
     while t < params.t_end
         update_particles!(ps, t, params)
 
         # only save once every so many frames
+        print_time(t, params.t_end)
         if i % params.save_skip == 0
             record_particles(files, ps, params)
         end
 
-        t += get_dt(ps, params)
+        t += get_dt(ps, t, params)
         i += 1
-        print_time(t, params.t_end)
     end
 
     close_files(files)
@@ -45,13 +43,14 @@ end
 
 
 
-function get_dt(ps, params)
+function get_dt(ps, t, params)
     if !params.adaptive
         return params.dt_min
     end
 
-    tm = minimum([p.dt for p in ps])
-    return params.dt_min
+    tm = minimum([(t - p.t) for p in ps])
+    tm = max(params.dt_min, tm)
+    return tm
 end
 
 
@@ -107,6 +106,7 @@ function setup!(p::Particle, tree, params)
 
     p.ρ = ρ(p, params)
     p.h = h(p, params)
+    p.c = cs(p)
 end
 
 
@@ -118,9 +118,17 @@ end
 
 
 function update_energy!(p::Particle, params)
-    p.u += du_P(p, params) * p.dt
-    p.u += du_cond(p, params) * p.dt
-    p.u += du_cool(p, params) * p.dt
+    p.du_P = du_P(p, params) 
+    p.du_cond = du_cond(p, params) 
+    p.du_visc = du_visc(p, params) 
+    ducool = du_cool(p, params)
+
+    p.u += (p.du_P + p.du_cond + p.du_visc + ducool) * p.dt
+
+    if p.u < 0
+        p.u = 0
+        # eventually steal energy from neighbors
+    end
 
     p.T = 2/(3R_ig) * p.u
     p.P = R_ig/params.mu_0 * p.ρ * p.T
@@ -129,11 +137,17 @@ end
 
 
 function update_velocity!(p::Particle, tree, params)
-    a = a_DM(p.x, params)
-    a .+= dv_P(p, params)
-    a_G!(a, p, tree, params)
+    dv_G = a_DM(p.x, params) 
+    p.dv_P .= dv_P(p, params) 
+    p.dv_visc .= dv_visc(p, params) 
 
-    p.v .+= a * p.dt
+    if params.phys_gravity
+        a_G!(dv_G, p, tree, params)
+    end
+
+    dv = @. dv_G + p.dv_P + p.dv_visc
+
+    p.v .+= dv * p.dt
 end
 
 
@@ -145,13 +159,10 @@ end
 
 
 function update_dt!(p::Particle, t, params)
-    if length(p.distances) < 1
-        p.dt = params.dt_min
-        p.t += p.dt
-        return
-    end
-
     dt = params.tol * 3/sqrt(8π * G * p.ρ)
+    r = (p.m/p.ρ)^(1/3)
+    dt_P = r / p.c
+    dt = min(dt, dt_P)
 
     dtn = minimum(q.dt for q in p.neighbors)
     dt = min(dt, params.dt_rel_max * dtn)
@@ -159,90 +170,6 @@ function update_dt!(p::Particle, t, params)
     dt = max(dt, params.dt_min)
 
     p.dt = dt
-    p.t += p.dt
-end
-
-
-
-
-function print_time(t, t_end)
-    if t < 1e3*yr
-        s = @sprintf("%4.0f yr", t/yr)
-    elseif t < 1e6yr
-        s = @sprintf("%4.0f kyr", t/1e3yr)
-    elseif t < 1e9*yr
-        s = @sprintf("%4.0f Myr", t/1e6yr)
-    else
-        s = @sprintf("%4.0f Gyr", t/1e9yr)
-    end 
-
-    p = t/t_end*100
-    sp = @sprintf("%2.2f %% complete", p)
-
-    print("t =\t" * s * ", " * sp * "\r")
-end
-
-
-
-FILE_NAMES = (
-    "t",
-    "x1", "x2", "x3",
-    "v1", "v2", "v3",
-    "rho",
-    "h",
-    "T",
-    "mstar"
-   )
-
-VAR_NAMES = (p->p.t/yr,
-             p->p.x[1]/pc, p->p.x[2]/pc, p->p.x[3]/pc,
-             p->p.v[1], p->p.v[2], p->p.v[3],    
-             p->p.ρ,
-             p->p.h/pc,
-             p->p.T,
-             p->p.mstar,
-            )
-
-function open_files(params)
-    mkpath(params.name)
-
-    # delete files
-    for file in glob("$(params.name)/*.dat")
-        rm(file)
-    end
-
-    files = Vector()
-
-    for basename in FILE_NAMES
-        fname = "$(params.name)/$(basename).dat"
-        file = open(fname, "w")
-        push!(files, file)
-    end
-
-    println("Opened files")
-
-    return files
-end
-
-
-
-
-function record_particles(files, particles, params)
-    for (file, var) in zip(files, VAR_NAMES)
-        for p in particles
-            val = var(p)
-            print(file, "$val,")
-        end
-
-        println(file)
-    end
-
-end
-
-
-
-function close_files(files)
-    close.(files)
 end
 
 
