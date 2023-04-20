@@ -1,11 +1,11 @@
 ################# Simulation Parameters ###############
 
-name = "sedov" # name to save to
+name = "two_body_p" # name to save to
 # seed = 127
 
 save_skip = 100  # number of frames to skip when saving
-N = 500         # number of simulation particles
-t_end = 1e8     # years to integrate for
+N = 2         # number of simulation particles
+t_end = 1e9     # years to integrate for
 
 adaptive = true
 dt_min = 1e3    # minimum timestep

@@ -10,9 +10,9 @@ function setup()
     params = GalaxySim.Constants.Params("src/sedov.toml")
 
     T = params.T0
-    Th = 10
+    Th = 1e3
 
-    R_max = 3*pc
+    R_max = 10*pc
     M_tot = 10Msun
     m = M_tot/(params.N)
 

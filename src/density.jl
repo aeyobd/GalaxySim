@@ -28,7 +28,7 @@ function dh!(p::Particle, params)
 end
 
 
-function W(p::Particle, q::Particle)
+function W(p::AParticle, q::AParticle)
     return (W(dist(p, q), p.h) + W(dist(p, q), q.h))/2
 end
 
@@ -44,13 +44,14 @@ function W(r, h)
 end
 
 
-function ∇W(a::Particle, b::Particle)
-    r_hat = normalize(a.x .- b.x)
+function ∇W(a::AParticle, b::AParticle)
+    # since F is <0, W points towards a
+    r_hat = normalize(b.x .- a.x)
     return F_ab(a, b) * r_hat
 end
 
 
-function F_ab(a::Particle, b::Particle)
+function F_ab(a::AParticle, b::AParticle)
     r = dist(a, b)
     q1 = abs(r/a.h)
     q2 = abs(r/b.h)
@@ -72,9 +73,9 @@ end
 
 
 function dw(q)
-    σ = -495/32π
+    σ = 495/32π
     c2 = max(0, 1-q)^5
-    return σ * 56/3 * c2 * (q + 5*q^2)
+    return -σ * 56/3 * c2 * (q + 5*q^2)
 end
 
 
@@ -89,7 +90,7 @@ end
 Calculates the distance
 between two positions
 """
-function dist(p::Particle, q::Particle)
+function dist(p::AParticle, q::AParticle)
     return norm(p.x .- q.x)
 end
 

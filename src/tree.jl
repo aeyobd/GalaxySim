@@ -2,10 +2,11 @@ module Tree
 
 using ..Particles
 using ..Constants
+using ..Density
 using LinearAlgebra
 using Printf
 
-export make_tree, dv_G!, find_within_r
+export make_tree, dv_G!, find_neighbors!, find_within_r, U_G
 
 
 const max_depth = 30 # Adjust the maximum depth of the octree according to your problem
@@ -75,12 +76,12 @@ function insert_particle!(node::OctreeNode, particle::Particle, depth::Int)
 end
 
 
+
 """
 finds all particles within R of the target particle
 
 If nothing is close, returns the nearest
 """
-
 function find_within_r(p::Particle, node::OctreeNode, r::F)
     result = Particle[]
     min_distance = Inf
@@ -127,10 +128,24 @@ function find_within_r(p::Particle, node::OctreeNode, r::F)
 end
 
 
+
+function find_neighbors!(p::Particle, tree, params)
+    nearby = find_within_r(p, tree, p.h)
+
+    p.neighbors = NParticle[]
+    for q in nearby
+        q1 = interpolate(q, p.t)
+        q1.w = W(p, q1)
+        q1.dw = ∇W(p, q1)
+        push!(p.neighbors, q1)
+    end
+    return p.neighbors
+end
+
+
 """
 Gravitational acceleration between two masses
 """
-
 function dv_G!(p::Particle, q::Particle, params)
     eps = min(p.h, q.h) * params.r_plummer 
     r = q.x .- p.x
@@ -197,6 +212,45 @@ function make_tree(particles::Vector{Particle}, params)
     return tree
 end
 
+
+"""
+Gravitational potential between two masses
+"""
+function U_G(p::Particle, q::Particle, params)
+    eps = min(p.h, q.h) * params.r_plummer 
+    r = q.x .- p.x
+    u = -G*q.m*p.m /sqrt(norm(r)^2 + eps^2)
+    return u
+end
+
+
+function U_G(p::Particle, node::OctreeNode, params)
+    u = 0
+    if node.children === nothing
+        if node.particles != [] 
+            for q in node.particles
+                if q != p
+                    u += U_G(p, q, params)
+                end
+            end
+        end
+        return u
+    end
+
+    distance = norm(node.center - p.x)
+    if node.size / distance < params.theta
+        # Node is sufficiently far away, use a single force calculation for the node
+        # Don't use softening here
+        u += -G * p.m* node.mass / distance
+    else
+        # Node is not sufficiently far away, recurse to children
+        for child in node.children
+            u += U_G(p, child, params)
+        end
+    end
+
+    return u
+end
 
 
 

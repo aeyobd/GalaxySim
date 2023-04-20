@@ -28,12 +28,14 @@ function dv_DM!(p, params)
     return p.dv_DM
 end
 
+
 function a_DM(r::F, params)
     if r == 0
         return 0
     end
     G*params.M_tot/params.A_NFW * 1/r^2 * (r/(r + params.Rs) - log(1 + r/params.Rs))
 end
+
 
 function dv_P!(p::Particle, params)
     if !params.phys_pressure
@@ -60,7 +62,7 @@ function du_cond!(p::Particle, params)
     for q in p.neighbors
         kq = params.K_cond/q.ρ
         ρ_pq = (p.ρ + q.ρ)/2
-        p.du_cond += - q.m * (kp+kq) * (p.u-q.u) * (p.x-q.x) ⋅ ∇W(p, q) / (
+        p.du_cond += - q.m * (kp+kq) * (p.u-q.u) * (q.x-p.x) ⋅ ∇W(p, q) / (
                                 ρ_pq * dist(p, q)^2 + params.eta_visc^2*p.h^2)
     end
 
@@ -76,7 +78,7 @@ function du_P!(p, params)
     p.du_P = 0
 
     for q in p.neighbors
-        p.du_P += 1/2*q.m*(p.P/p.ρ^2 + q.P/q.ρ^2 + Π(p, q, params)) * (p.v-q.v) ⋅ ∇W(p, q)
+        p.du_P += 1/2*q.m*(p.P/p.ρ^2 + q.P/q.ρ^2 + Π(p, q, params)) * (q.v-p.v) ⋅ ∇W(p, q)
     end
 
     return p.du_P
@@ -104,7 +106,7 @@ function cs!(p)
     if p.T >= 0
         p.c = sqrt(5/3 * R_ig * p.T/p.μ)
     else
-        throw(DomainError(p.T, "argument must be positive!"))
+        throw(DomainError(p.T, "T must be positive!"))
     end
     return p.c
 end

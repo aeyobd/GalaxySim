@@ -12,8 +12,8 @@ using JLD2
 include("constants.jl")
 include("particles.jl")
 include("gal_files.jl")
-include("tree.jl")
 include("density.jl")
+include("tree.jl")
 include("init.jl")
 include("physics.jl")
 include("evolve.jl")
@@ -21,8 +21,8 @@ include("evolve.jl")
 using .Constants
 using .Particles
 using .GalFiles
-using .Tree
 using .Density
+using .Tree
 using .Init
 using .Physics
 using .Evolve
