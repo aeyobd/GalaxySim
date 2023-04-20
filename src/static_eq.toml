@@ -74,7 +74,7 @@ eta_visc = 0.1
 phys_gravity = true
 phys_DM = false
 
-phys_pressure = false
+phys_pressure = true
 phys_conduction = false
 phys_visc = false
 

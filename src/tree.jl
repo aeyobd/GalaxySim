@@ -134,7 +134,7 @@ function find_neighbors!(p::Particle, tree, params)
 
     p.neighbors = NParticle[]
     for q in nearby
-        q1 = interpolate(q, p.t)
+        q1 = interpolate(q, p.t, params)
         q1.w = W(p, q1)
         q1.dw = ∇W(p, q1)
         push!(p.neighbors, q1)

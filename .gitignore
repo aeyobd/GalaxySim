@@ -11,3 +11,5 @@ data/*
 
 analysis/*
 statprof
+
+log.txt

@@ -75,7 +75,7 @@ function du_P!(p, params)
         return 0.
     end
 
-    p.du_P = 0
+    p.du_P = 0.
 
     for q in p.neighbors
         p.du_P += 1/2*q.m*(p.P/p.ρ^2 + q.P/q.ρ^2 + Π(p, q, params)) * (q.v-p.v) ⋅ ∇W(p, q)
@@ -106,6 +106,7 @@ function cs!(p)
     if p.T >= 0
         p.c = sqrt(5/3 * R_ig * p.T/p.μ)
     else
+        println(p)
         throw(DomainError(p.T, "T must be positive!"))
     end
     return p.c

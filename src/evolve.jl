@@ -12,6 +12,7 @@ using ..GalFiles
 
 using LinearAlgebra
 using Printf
+using Logging
 
 
 function evolve(params)
@@ -24,6 +25,9 @@ end
 function evolve!(ps, params)
     files = open_files(params)
     e_file = open("energy.dat", "w")
+    log_file = open("log.txt", "w")
+    global_logger(SimpleLogger(log_file))
+
     println(e_file,     "thermal,kinetic,grav,tot")
     set_densities!(ps, params)
     t = 0
@@ -44,6 +48,7 @@ function evolve!(ps, params)
 
     close_files(files)
     close(e_file)
+    close(log_file)
 end
 
 
@@ -124,6 +129,12 @@ function update!(p::Particle, tree, params)
 
 
     p.du = p.du_P + p.du_cond
+
+    if p.du*p.dt + p.u < 0
+        p.du = p.u/p.dt/2
+        @debug "energy is near 0"
+    end
+
     p.u += p.du * p.dt
     p.dv .= p.dv_G .+ p.dv_P 
     p.t += p.dt
@@ -132,23 +143,19 @@ function update!(p::Particle, tree, params)
     p.P = R_ig/p.μ * p.ρ * p.T
     p.T = 2p.μ/(3R_ig) * p.u
 
+    # constraints on density evolution
+    if p.ρ + p.dρ * p.dt < params.rho_min
+        p.dρ = (params.rho_min-p.ρ)/p.dt
+        @debug "density hit limit"
+    end
+    if p.h + p.dh * p.dt < params.h_min
+        p.dh = (params.h_min - p.h)/p.dt
+        @debug "h hit limit"
+    end
+
     p.h += p.dh * p.dt
     p.ρ += p.dρ * p.dt
-
     p.ρ_gas = p.ρ * p.m_gas/p.m
-
-
-    if p.u < 0
-        println("enegy")
-        println(p)
-        println(p.u)
-        exit()
-    end
-    if p.ρ < 0
-        println("rho $(p.ρ)")
-        println(p)
-        exit()
-    end
 
     cs!(p)
 end
