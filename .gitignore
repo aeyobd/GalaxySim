@@ -9,4 +9,5 @@ data/*
 *.gif
 *.dat
 
+analysis/*
 statprof

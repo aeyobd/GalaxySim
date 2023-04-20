@@ -16,7 +16,7 @@ rho_min = 1e-30
 h_max = 1000
 h_min = 0.1
 dt_min = 1e3    # minimum timestep
-dt_max = 1e7    # minimum timestep
+dt_max = 1e5    # minimum timestep
 dt_rel_max = 10    # minimum timestep
 tol = 1e-3
 rho_maxiter = 20
@@ -73,6 +73,6 @@ phys_visc = false
 
 phys_feedback = false
 phys_star_formation = false
-adaptive=true
+adaptive=false
 
 

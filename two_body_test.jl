@@ -11,12 +11,12 @@ function setup()
 
     r_0 = 10pc
     M_0 = 10Msun
-    v_0 = sqrt(G*M_0/r_0)
+    v_0 = sqrt(G*M_0/r_0)/4
 
-    v_vec_1 = [0,0,0] * v_0
+    v_vec_1 = [0,1,0] * v_0
     v_vec_2 = [0,-1,0] * v_0
 
-    r_vec_1 = [0,0,0] * r_0
+    r_vec_1 = [-1,0,0] * r_0
     r_vec_2 = [1,0,0] * r_0
 
     p1 = Particle(
@@ -29,7 +29,7 @@ function setup()
     p2 = Particle(
         x = r_vec_2,
         v = v_vec_2,
-        m = 0.001M_0,
+        m = M_0,
         dt = params.dt_min
     )
 

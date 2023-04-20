@@ -141,9 +141,10 @@ function update!(p::Particle, tree, params)
     dv_DM!(p, params)
     dv_P!(p, params)
     if params.phys_gravity
+        p.dv_G = zeros(3)
         dv_G!(p, tree, params)
     end
-    p.dv = @. p.dv_G + p.dv_P 
+    p.dv .= p.dv_G .+ p.dv_P 
 end
 
 
