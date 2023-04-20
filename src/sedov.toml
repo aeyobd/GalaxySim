@@ -25,6 +25,7 @@ rho_maxiter = 20
 rho_max = 1e10
 rho_min = 1e-20
 h_max = 10 #pc
+h_min = 0.1 #pc
 
 
 r_plummer = 0.2 # Gravitational softening radius, in terms of h
@@ -66,15 +67,19 @@ rho_cond = 0.05
 
 eta_eff = 0.00
 
+alpha_visc = 1
+beta_visc = 2
+eta_visc = 0.1
+
 
 ################# Physics #########################
 
 phys_gravity = false
-phys_dm = false
+phys_DM = false
 
 phys_pressure = true
-phys_conduction = true
-phys_visc = true
+phys_conduction = false
+phys_visc = false
 
 phys_cooling = false
 phys_star_formation = false

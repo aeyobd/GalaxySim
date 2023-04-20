@@ -56,50 +56,31 @@ end
 
 
 function update_particles!(ps, t, params)
-    tree = make_tree(ps, params)
 
     update_ps = which_update(ps, t, params)
 
-    d1 = d3 = 1.35120719
-    d2 = -1.70241438
-    c1 = c4 = d1/2
-    c2 = c3 = (d1 + d2)/2
-    # where to calculate accel.
-    e1 = c1+c4
-    e2 = c2
-    e3 = c3
-
-    # use 4th order yoshida integrator
+    # leapfrog integration
     for p in update_ps
+        p.v .+= p.dv * p.dt/2
+        p.x .+= p.v * p.dt
+    end
+
+    tree = make_tree(ps, params)
+    for p in update_ps
+        # recalculate dv
         setup!(p, tree, params)
-
-        p.x .+= c1*p.v*p.dt
-
-        update!(p, tree, params)
-        advance!(p, e1*p.dt, params)
     end
 
     for p in update_ps
-        p.x .+= c2*p.v*p.dt
-        # advances dv approprietly
         update!(p, tree, params)
-        advance!(p, e2*p.dt, params)
+        p.v .+= p.dv * p.dt/2
     end
 
     for p in update_ps
-        p.x .+= c3*p.v*p.dt
-
-        update!(p, tree, params)
-        advance!(p, e3*p.dt, params)
-    end
-
-    for p in update_ps
-        p.x .+= c4*p.v*p.dt
-        # last step doesn't increase v
         update_m_star!(p, params)
         update_dt!(p, t, params)
+        p.t += p.dt
     end
-
 end
 
 
@@ -125,18 +106,24 @@ end
 
 function setup!(p::Particle, tree, params)
     p.neighbors = find_within_r(p, tree, p.h)
-    p.t += p.dt
+    dh!(p, params)
+    dρ!(p, params)
+    p.h += p.dh * p.dt
+    p.ρ += p.dρ * p.dt
+
+    p.P = R_ig/p.μ * p.ρ * p.T
+    p.T = 2p.μ/(3R_ig) * p.u
+
+    p.ρ_gas = p.ρ * p.m_gas/p.m
+
+    cs!(p)
 end
 
 
 
 function update!(p::Particle, tree, params)
-    dh!(p, params)
-    dρ!(p, params)
-
     du_P!(p, params)
     du_cond!(p, params)
-    p.du = p.du_P + p.du_cond
 
     dv_DM!(p, params)
     dv_P!(p, params)
@@ -144,34 +131,26 @@ function update!(p::Particle, tree, params)
         p.dv_G = zeros(3)
         dv_G!(p, tree, params)
     end
+
+    p.du = p.du_P + p.du_cond
+    p.u += p.du * p.dt
     p.dv .= p.dv_G .+ p.dv_P 
-end
+    p.t += p.dt
 
-
-function advance!(p::Particle, dt, params)
-    p.h = max(p.h +p.dh * dt, 1)
-    p.ρ = max(p.ρ + p.dρ * dt, 0)
-    p.v .+= p.dv * dt
-    p.u += p.u * dt
-    p.ρ_gas = p.ρ * p.m_gas/p.m
-    cs!(p)
-
-    p.T = 2p.μ/(3R_ig) * p.u
-    p.P = R_ig/p.μ * p.ρ * p.T
 end
 
 
 function update_m_star!(p::Particle, params)
-    if p.t > p.dt
-        dm_star!(p, params)
-        if p.m_star > p.m
-            p.m_star = p.m
-            p.dm_star = p.m_gas
-        end
-        p.m_star += p.dm_star * p.dt
+    dm_star!(p, params)
 
-        p.m_gas = p.m - p.m_star
+    # check for positive...
+    if p.m_star > p.m
+        p.m_star = p.m
+        p.dm_star = p.m_gas
     end
+    p.m_star += p.dm_star * p.dt
+
+    p.m_gas = p.m - p.m_star
 end
 
 
@@ -187,6 +166,10 @@ function update_dt!(p::Particle, t, params)
     dt = min(dt, params.dt_max)
     dt = max(dt, params.dt_min)
 
+    if dt ===NaN
+        println("dt")
+        exit()
+    end
     p.dt = dt
 end
 

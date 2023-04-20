@@ -101,6 +101,7 @@ used for initial calculation of ρ
 """
 function ρ(p::Particle, params)
     if length(p.neighbors) < 1
+        println("warning, no neighbors")
         return params.rho_min
     end
 

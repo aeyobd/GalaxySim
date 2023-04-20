@@ -13,7 +13,7 @@ const max_depth = 30 # Adjust the maximum depth of the octree according to your 
 
 mutable struct OctreeNode
     children::Union{Nothing, Vector{OctreeNode}}
-    particle::Union{Nothing, Particle}
+    particles::Vector{Particle}
     center::Vector{F}
     center_of_mass::Vector{F}
 
@@ -24,7 +24,7 @@ end
 
 
 function create_octree_node(center, size, depth=0)
-    return OctreeNode(nothing, nothing, center, zeros(3), 0, size, depth)
+    return OctreeNode(nothing, [], center, zeros(3), 0, size, depth)
 end
 
 
@@ -52,16 +52,18 @@ function insert_particle!(node::OctreeNode, particle::Particle, depth::Int)
     node.mass += particle.m
 
     # If either at maximum depth or no children, we can insert the particle
-    if depth >= max_depth || node.children === nothing && node.particle === nothing
-        node.particle = particle
+    if depth >= max_depth || node.children === nothing
+        push!(node.particles, particle)
         return
     end
 
     if node.children === nothing
         node.children = create_children(node)
 
-        insert_particle!(node, node.particle, depth + 1)
-        node.particle = nothing
+        for p in node.particles
+            insert_particle!(node, p, depth + 1)
+        end
+        node.particles = []
     end
 
     index = 1
@@ -86,14 +88,18 @@ function find_within_r(p::Particle, node::OctreeNode, r::F)
 
     function traverse(node::OctreeNode, r::F)
         if node.children === nothing
-            if node.particle !== nothing && node.particle != p 
-                d = norm(node.particle.x - p.x)
-                if d <= r
-                    push!(result, node.particle)
+            for q in node.particles
+                if q == p
+                    continue
+                end
+
+                d = norm(q.x - p.x)
+                if d <= r 
+                    push!(result, q)
                     min_distance = -1 # don't need this anymore
                 elseif min_distance > 0 && d <= min_distance
                     min_distance = d
-                    min_particle = node.particle
+                    min_particle = q
                 end
             end
             return
@@ -101,7 +107,7 @@ function find_within_r(p::Particle, node::OctreeNode, r::F)
 
         for child in node.children
             d = norm(child.center - p.x) - child.size
-            if  d <= r || (min_distance > 0 && d <= min_distance)
+            if  d <= r || (min_distance > 0 && d <= min_distance) || min_particle===nothing
                 traverse(child, r)
             end
         end
@@ -111,7 +117,8 @@ function find_within_r(p::Particle, node::OctreeNode, r::F)
 
     if min_distance > 0
         if min_particle == nothing
-            println("oops")
+            println(p)
+            throw(error("could not find nearest neighbor, are there NaNs?"))
         end
         return [min_particle]
     end
@@ -134,9 +141,12 @@ end
 
 function dv_G!(p::Particle, node::OctreeNode, params)
     if node.children === nothing
-        if node.particle === nothing || node.particle == p
-        else
-            dv_G!(p, node.particle, params)
+        if node.particles != [] 
+            for q in node.particles
+                if q != p
+                    dv_G!(p, q, params)
+                end
+            end
         end
         return p.dv_G
     end
@@ -194,10 +204,10 @@ end
 
 function Base.show(io::IO, tree::OctreeNode)
     if tree.children == nothing 
-        if tree.particle != nothing
+        for q in  tree.particles
             print(io, "   |"^(tree.depth -1))
             print(io, "--")
-            show(io, "text/plain", tree.particle)
+            show(io, "text/plain", q)
             println(io)
         end
     else

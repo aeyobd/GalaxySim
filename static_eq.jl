@@ -36,7 +36,9 @@ function setup()
         r = rand()*R_max
         x = r * GalaxySim.Init.rand_unit_vector()
         v = 2σ * GalaxySim.Init.rand_tangent(x)
-        push!(ps, Particle(x=x, v=v, m=m, T=T))
+        p = Particle(x=x, v=v, m=m, T=T)
+        p.ρ = ρ_mean
+        push!(ps, p)
     end
 
     return ps, params

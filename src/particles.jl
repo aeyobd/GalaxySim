@@ -24,7 +24,7 @@ Base.@kwdef mutable struct Particle
     neighbors::Vector{Particle} = []
 
     T::F = 0.1
-    u::F = 3/2*R_ig*T
+    u::F = 3/2*R_ig/μ*T
     P::F = R_ig/μ * ρ * T
 
     ρ_gas::F = ρ

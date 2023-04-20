@@ -85,7 +85,7 @@ end
 
 function Π(p, q, params)
     vr = (p.x - q.x) ⋅ (p.v - q.v)
-    if vr > 0 || !params.phys_visc
+    if !params.phys_visc || vr > 0 
         return 0.
     end
 
@@ -101,10 +101,10 @@ end
 
 
 function cs!(p)
-    if p.T > 0
+    if p.T >= 0
         p.c = sqrt(5/3 * R_ig * p.T/p.μ)
     else
-        p.c = 0
+        throw(DomainError(p.T, "argument must be positive!"))
     end
     return p.c
 end

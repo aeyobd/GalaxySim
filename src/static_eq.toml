@@ -14,21 +14,24 @@ t_end = 1e7     # years to integrate for
 dt_min = 1e3    # minimum timestep
 dt_max = 1e5
 dt_rel_max = 10
+adaptive = true
 
 
 theta = 0.05    # BH theta parameter
-eta = 2         # density estimation parameter
+eta = 3         # density estimation parameter
 
 # density estimation parameters
-tol = 1e-3
-rho_maxiter = 40
-rho_max = 1e-15 # min and maximum densities allowed
-rho_min = 1e-30
+tol = 1e-4
+rho_maxiter = 100
+rho_max = 1e15 # min and maximum densities allowed
+rho_min = 1e-40
+
+h_min = 0.1
+h_max = 1000
 
 
 r_plummer = 0.5 # Gravitational softening radius, in terms of h
 
-adaptive = true
 
 
 ################# Initial Conditions #####################
@@ -51,6 +54,7 @@ gamma = 1.5     # baryonic compactness parameter
 
 ################# Evolutionary Parameters ################
 K_cond = 2e7    # conduction constant
+n_K = 0.05
 sfe = 0.00      # star formation effeciency
 mu_0 = 1.4      # mean mass per gas particle in proton masses (mix of H and He)
 
@@ -64,14 +68,20 @@ rho_cond = 0.05
 
 eta_eff = 0.00
 
+alpha_visc = 1
+beta_visc = 2
+eta_visc = 0.1
 
 ################# Physics #########################
 
 phys_gravity = true
-phys_dm = false
+phys_DM = false
+
 phys_pressure = true
-phys_cooling = false
+phys_conduction = true
+phys_visc = true
+
+phys_feedback = false
 phys_star_formation = false
-phys_conduction = false
 
 
