@@ -8,6 +8,7 @@ using ..Constants
 
 const μ = 1.4
 
+
 Base.@kwdef mutable struct Particle
     x::MVector{3,F}
     v::MVector{3,F}
@@ -17,19 +18,18 @@ Base.@kwdef mutable struct Particle
     ρ::F = 1 * m_p
     h::F = 5 * pc
     c::F = 0
-    μ::F = 1.4  # mean molecular mass in m_p
+    μ::F = 1.4
 
     # stars::Vector = []
     neighbors::Vector{Particle} = []
-    distances::Vector{F} = []
 
     T::F = 0.1
     u::F = 3/2*R_ig*T
     P::F = R_ig/μ * ρ * T
 
-    ρgas::F = ρ
-    mgas::F = m
-    mstar::F = 0
+    ρ_gas::F = ρ
+    m_gas::F = m
+    m_star::F = 0
 
     t::F = 0
     dt::F = 0
@@ -37,20 +37,34 @@ Base.@kwdef mutable struct Particle
     id::Int = 0
 
     # derivatives :)
-    dv_dt::MVector{3, F} = zeros(3)
-    dmgas_dt::F = 0
-    dρ_dt::F = 0
-    du_dt::F = 0
+    dv::MVector{3, F} = zeros(3)
+    dm_star::F = 0
+    dρ::F = 0
+    du::F = 0
+    dh::F = 0
 
+    # for tracking each process
     du_P::F = 0
-    du_G::F = 0
-    du_visc::F = 0
     du_cond::F = 0
 
     dv_P::MVector{3, F} = zeros(3)
-    dv_visc::MVector{3, F} = zeros(3)
+    dv_G::MVector{3, F} = zeros(3)
+    dv_DM::MVector{3, F} = zeros(3)
 end
 
+
+Base.@kwdef mutable struct NParticle
+    x::MVector{3,F}
+    v::MVector{3,F}
+    m::F
+    ρ::F = 1 * m_p
+    h::F = 5 * pc
+    c::F = 0
+    μ::F = 1.4  # mean molecular mass in m_p
+    T::F = 0.1
+    u::F = 3/2*R_ig*T
+    P::F = R_ig/μ * ρ * T
+end
 
 function interpolate(p::Particle, symbol, t)
     f = getproperty(p, :symbol)
@@ -70,7 +84,7 @@ function Base.show(io::IO, p::Particle)
     @printf io "T (K) \t%8.3e\n"                     p.T
     @printf io "u\t%8.2e\n"                     p.u
     @printf io "P\t%8.2e\n"                     p.P
-    @printf io "M_stars\t%0.2f\n"               (p.mstar/Msun)
+    @printf io "M_stars\t%0.2f\n"               (p.m_star/Msun)
     @printf io "ID\t%d\n"                       p.id
     println(io)
 end

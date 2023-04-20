@@ -1,6 +1,6 @@
 module Init
 
-export rand_particles
+export rand_particles, set_densities!
 
 using LinearAlgebra
 import Roots: find_zero
@@ -11,7 +11,21 @@ using StaticArrays
 
 using ..Constants
 using ..Particles
+using ..Tree
+using ..Density
 
+
+
+function set_densities!(ps, params)
+    tree = make_tree(ps, params)
+    for p in ps
+        p.neighbors = find_within_r(p, tree, 100pc)
+        p.ρ = ρ(p, params)
+        p.h = h(p, params)
+    end
+
+    return ps
+end
 
 
 """
@@ -29,6 +43,7 @@ function rand_particles(params)
     set_seed!(params)
     return [rand_particle(i, params) for i in 1:params.N]
 end
+
 
 
 """ Sets the RNG seed if seed is set in params.  """

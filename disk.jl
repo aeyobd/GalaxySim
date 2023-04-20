@@ -7,24 +7,21 @@ using QuadGK
 import GalaxySim.Constants: R_ig, m_p, G, k_B
 
 function setup()
-    params = GalaxySim.Constants.get_params("src/sedov.toml")
+    params = GalaxySim.Constants.get_params("src/disk.toml")
 
     T = params.T0
-    Th = 10^5
 
-    R_max = 3*pc
-    M_tot = 1000Msun
-    m = M_tot/(params.N)
-
-    ρ_mean = M_tot/R_max^3 / m_p
-    println(ρ_mean)
+    R_max = params.R_bary*10
+    m = params.M_bary/(params.N)
 
     ps = Particle[]
-    push!(ps, Particle(x=zeros(3), v=zeros(3), m=m, T=Th, id=0))
+    v_vir = sqrt(G * params.M_bary/R_max)/4
 
     for i in 1:params.N
-        x = R_max * sqrt(rand()) * GalaxySim.Init.rand_unit_vector()
-        v = zeros(3)
+        vec = randn(2)
+        push!(vec, 0.1*randn())
+        x = vec * R_max 
+        v = [0,0,1.0] × vec * v_vir * norm(vec)
         push!(ps, Particle(x=x, v=v, m=m, T=T, id=i))
     end
 

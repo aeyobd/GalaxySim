@@ -44,8 +44,10 @@ FILE_NAMES = (
     "du_P",
     "du_C",
     "du_V",
+    "du_cool",
     "dv_P",
     "dv_V",
+    "dv_G",
    )
 
 VAR_NAMES = (p->p.t/yr,
@@ -54,15 +56,14 @@ VAR_NAMES = (p->p.t/yr,
              p->p.ρ/m_p,
              p->p.h/pc,
              p->p.T,
-             p->p.mstar/Msun,
+             p->p.m_star/Msun,
              p->length(p.neighbors),
              p->p.dt/yr,
              p->p.P,
              p->p.du_P,
              p->p.du_cond,
-             p->p.du_visc,
              p->norm(p.dv_P),
-             p->norm(p.dv_visc),
+             p->norm(p.dv_G),
             )
 
 function open_files(params)

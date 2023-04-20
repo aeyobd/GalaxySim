@@ -22,7 +22,7 @@ end
 
 function evolve!(ps, params)
     files = open_files(params)
-
+    set_densities!(ps, params)
     t = 0
     i = 0
     while t < params.t_end
@@ -60,19 +60,43 @@ function update_particles!(ps, t, params)
 
     update_ps = which_update(ps, t, params)
 
-    for p in update_ps
-        update_h_position!(p)
-    end
-    
+    d1 = d3 = 1.35120719
+    d2 = -1.70241438
+    c1 = c4 = d1/2
+    c2 = c3 = (d1 + d2)/2
+    # where to calculate accel.
+    e1 = c1+c4
+    e2 = c2
+    e3 = c3
+
+    # use 4th order yoshida integrator
     for p in update_ps
         setup!(p, tree, params)
-        update_energy!(p, params)
+
+        p.x .+= c1*p.v*p.dt
+
+        update!(p, tree, params)
+        advance!(p, e1*p.dt, params)
     end
 
     for p in update_ps
-        update_velocity!(p, tree, params)
-        update_h_position!(p)
-        update_mstar!(p, params)
+        p.x .+= c2*p.v*p.dt
+        # advances dv approprietly
+        update!(p, tree, params)
+        advance!(p, e2*p.dt, params)
+    end
+
+    for p in update_ps
+        p.x .+= c3*p.v*p.dt
+
+        update!(p, tree, params)
+        advance!(p, e3*p.dt, params)
+    end
+
+    for p in update_ps
+        p.x .+= c4*p.v*p.dt
+        # last step doesn't increase v
+        update_m_star!(p, params)
         update_dt!(p, t, params)
     end
 
@@ -101,59 +125,52 @@ end
 
 function setup!(p::Particle, tree, params)
     p.neighbors = find_within_r(p, tree, p.h)
-    p.distances = [dist(p, q) for q in p.neighbors]
     p.t += p.dt
-
-    p.ρ = ρ(p, params)
-    p.h = h(p, params)
-    p.c = cs(p)
 end
 
 
 
-function update_h_position!(p::Particle)
-    p.x .+= p.v * p.dt/2
-end
+function update!(p::Particle, tree, params)
+    dh!(p, params)
+    dρ!(p, params)
 
+    du_P!(p, params)
+    du_cond!(p, params)
+    p.du = p.du_P + p.du_cond
 
-
-function update_energy!(p::Particle, params)
-    p.du_P = du_P(p, params) 
-    p.du_cond = du_cond(p, params) 
-    p.du_visc = du_visc(p, params) 
-    ducool = du_cool(p, params)
-
-    p.u += (p.du_P + p.du_cond + p.du_visc + ducool) * p.dt
-
-    if p.u < 0
-        p.u = 0
-        # eventually steal energy from neighbors
-    end
-
-    p.T = 2/(3R_ig) * p.u
-    p.P = R_ig/params.mu_0 * p.ρ * p.T
-end
-
-
-
-function update_velocity!(p::Particle, tree, params)
-    dv_G = a_DM(p.x, params) 
-    p.dv_P .= dv_P(p, params) 
-    p.dv_visc .= dv_visc(p, params) 
-
+    dv_DM!(p, params)
+    dv_P!(p, params)
     if params.phys_gravity
-        a_G!(dv_G, p, tree, params)
+        dv_G!(p, tree, params)
     end
-
-    dv = @. dv_G + p.dv_P + p.dv_visc
-
-    p.v .+= dv * p.dt
+    p.dv = @. p.dv_G + p.dv_P 
 end
 
 
+function advance!(p::Particle, dt, params)
+    p.h = max(p.h +p.dh * dt, 1)
+    p.ρ = max(p.ρ + p.dρ * dt, 0)
+    p.v .+= p.dv * dt
+    p.u += p.u * dt
+    p.ρ_gas = p.ρ * p.m_gas/p.m
+    cs!(p)
 
-function update_mstar!(p::Particle, params)
-    p.mstar += dm_star(p, params)
+    p.T = 2p.μ/(3R_ig) * p.u
+    p.P = R_ig/p.μ * p.ρ * p.T
+end
+
+
+function update_m_star!(p::Particle, params)
+    if p.t > p.dt
+        dm_star!(p, params)
+        if p.m_star > p.m
+            p.m_star = p.m
+            p.dm_star = p.m_gas
+        end
+        p.m_star += p.dm_star * p.dt
+
+        p.m_gas = p.m - p.m_star
+    end
 end
 
 

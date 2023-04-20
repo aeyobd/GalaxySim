@@ -1,38 +1,44 @@
 # all units are in cgs.
-# this is designed as a test for initial
+# this is designed as a test for 
+# gravity and pressure rules, using an approximation
+# of the isothermal sphere for an ideal gas
 
 ################# Simulation Parameters ###############
-name = "two_body"
+name = "disk" # name to save to
+# seed = 127
+save_skip = 25  # number of frames to skip when saving
 
-N = 2         # number of simulation particles
+N = 300         # number of simulation particles
 t_end = 1e9     # years to integrate for
-save_skip = 10
 
-theta = 0.5    # BH theta parameter
-eta = 1         # density estimation parameter
+dt_min = 1e4    # minimum timestep
+dt_max = 1e7
+dt_rel_max = 20
 
-rho_max = 1e15 # min and maximum densities allowed
-rho_min = 1e-30
-h_max = 1000
-h_min = 0.1
-dt_min = 1e3    # minimum timestep
-dt_max = 1e7    # minimum timestep
-dt_rel_max = 10    # minimum timestep
+
+theta = 0.05    # BH theta parameter
+eta = 4         # density estimation parameter
+
+# density estimation parameters
 tol = 1e-3
 rho_maxiter = 20
+rho_max = 1e10
+rho_min = 1e-30
 
-r_plummer = 0.0001 # Gravitational softening radius, in terms of h
+r_plummer = 0.2 # Gravitational softening radius, in terms of h
+
+adaptive = true
 
 
 ################# Initial Conditions #####################
-T0 = 0       # initial temperature at the center
+T0 = 10         # initial temperature at the center
 v_0 = 0         # factor to multiply v by (initalized as v_viral)
-sigma_v = 0     # how much scatter in v/
+sigma_v = 0.2     # how much scatter in v/
 sigma_M = 0     # relative spread of particle masses
 
 # these are in Msun
-M_tot = 0e8
-M_bary = 1e2
+M_tot = 1e8
+M_bary = 1e6
 
 # in parsecs
 R_virial = 1e3
@@ -43,20 +49,22 @@ gamma = 1.5     # baryonic compactness parameter
 
 
 ################# Evolutionary Parameters ################
-K_cond = 0e7    # conduction constant
-sfe = 0.00      # star formation effeciency
+K_cond = 4e7    # conduction constant
 n_K = 0.05
+sfe = 0.01      # star formation effeciency
 mu_0 = 1.4      # mean mass per gas particle in proton masses (mix of H and He)
-eta_eff = 0.00
+eta_eff = 1
+rho_0 = 100     # minimum sf mass
 
 Jfuv = 0        # far UV energy density
 Gamma_0 = 0     # stellar feedback factor
 f_rad = 0       # radiative heating fraction
 Lambda_0 = 0    # cooling factor
 
-rho_0 = 1e10      # minimum star density for star form in protons/cm^3
 rho_cond = 0.05
 
+
+# viscosity parameters
 alpha_visc = 1
 beta_visc = 2
 eta_visc = 0.1
@@ -67,12 +75,12 @@ eta_visc = 0.1
 phys_gravity = true
 phys_DM = false
 
-phys_pressure = false
-phys_conduction = false
-phys_visc = false
+phys_pressure = true
+phys_conduction = true
+phys_visc = true
 
 phys_feedback = false
-phys_star_formation = false
-adaptive=true
+phys_star_formation = true
+
 
 

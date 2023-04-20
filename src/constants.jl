@@ -25,12 +25,12 @@ function get_params(filename)
    params["M_tot"] *= Msun
    params["R_virial"] *= pc
    params["R_bary"] *= pc
+   params["h_max"] *= pc
    params["A_NFW"] = (log(1+params["c"]) - params["c"]/(1+params["c"]))
    params["Rs"] = params["R_virial"]/params["c"]
    params["t_end"] *= yr
    params["dt_min"] *= yr
    params["dt_max"] *= yr
-   params["h_max"] *= pc
    params["rho_min"] *= m_p
    params["rho_max"] *= m_p
    params["rho_0"] *= m_p

@@ -2,13 +2,14 @@ module Tree
 
 using ..Particles
 using ..Constants
-using ..Init
 using LinearAlgebra
 using Printf
 
-export make_tree, a_G, find_within_r, a_G!
+export make_tree, dv_G!, find_within_r
+
 
 const max_depth = 30 # Adjust the maximum depth of the octree according to your problem
+
 
 mutable struct OctreeNode
     children::Union{Nothing, Vector{OctreeNode}}
@@ -123,36 +124,36 @@ end
 Gravitational acceleration between two masses
 """
 
-function a_G!(a, p::Particle, q::Particle, params)
+function dv_G!(p::Particle, q::Particle, params)
     eps = min(p.h, q.h) * params.r_plummer 
     r = q.x .- p.x
-    a .+= G*q.m * normalize(r)/(sum(r.*r) + eps^2)
-    return a
+    p.dv_G .+= G*q.m * normalize(r)/(sum(r.*r) + eps^2)
+    return p.dv_G
 end
 
 
-function a_G!(a, p::Particle, node::OctreeNode, params)
+function dv_G!(p::Particle, node::OctreeNode, params)
     if node.children === nothing
         if node.particle === nothing || node.particle == p
         else
-            a_G!(a, p, node.particle, params)
+            dv_G!(p, node.particle, params)
         end
-        return a
+        return p.dv_G
     end
 
     distance = norm(node.center - p.x)
     if node.size / distance < params.theta
         # Node is sufficiently far away, use a single force calculation for the node
         # Don't use softening here
-        a .+= G * node.mass * (node.center_of_mass - p.x) / distance^3
+        p.dv_G .+= G * node.mass * (node.center_of_mass - p.x) / distance^3
     else
         # Node is not sufficiently far away, recurse to children
         for child in node.children
-            a_G!(a, p, child, params)
+            dv_G!(p, child, params)
         end
     end
 
-    return a
+    return p.dv_G
 end
 
 

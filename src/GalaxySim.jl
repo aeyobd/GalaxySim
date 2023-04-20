@@ -12,20 +12,20 @@ using JLD2
 include("constants.jl")
 include("particles.jl")
 include("gal_files.jl")
-include("init.jl")
-include("density.jl")
-include("physics.jl")
 include("tree.jl")
+include("density.jl")
+include("init.jl")
+include("physics.jl")
 include("evolve.jl")
 
 using .Constants
 using .Particles
 using .GalFiles
-using .Init
+using .Tree
 using .Density
+using .Init
 using .Physics
 using .Evolve
-using .Tree
 
 # Lengths are pc, times are years
 # Masses in solar mass
