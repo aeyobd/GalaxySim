@@ -48,7 +48,7 @@ end
 
 """ Sets the RNG seed if seed is set in params.  """
 function set_seed!(params)
-    if :seed in keys(params)
+    if params.seed > 0
         Random.seed!(params.seed)
     end
 end
@@ -118,7 +118,7 @@ end
 """ The virial velocity at r """
 function v_virial(r::F, params)
     v0_virial = √(G*params.M_tot/params.R_virial)
-    x = r/params.Rs
+    x = r/params.R_s
     return v0_virial * √( 1/x * (log(1 + params.c*x) - (params.c*x)/(1 + params.c*x)) 
                          /params.A_NFW )
 end

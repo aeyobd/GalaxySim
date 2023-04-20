@@ -7,13 +7,13 @@ using QuadGK
 import GalaxySim.Constants: R_ig, m_p, G, k_B
 
 function setup()
-    params = GalaxySim.Constants.get_params("src/sedov.toml")
+    params = GalaxySim.Constants.Params("src/sedov.toml")
 
     T = params.T0
-    Th = 10^5
+    Th = 10
 
     R_max = 3*pc
-    M_tot = 1000Msun
+    M_tot = 10Msun
     m = M_tot/(params.N)
 
     ρ_mean = M_tot/R_max^3 / m_p
