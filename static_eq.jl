@@ -5,14 +5,15 @@ using GalaxySim
 using LinearAlgebra
 using QuadGK
 import GalaxySim.Constants: R_ig, m_p, G
+include("init/init.jl")
 
 # cgs
 const k_B = 1.3807e-16
 
 function setup()
-    params = GalaxySim.Constants.Params("src/static_eq.toml")
+    params = Params("init/static_eq.toml")
 
-    T = params.T0
+    T = 10
     σ = sqrt(k_B*T/m_p)
     C = σ^2/(2π * G)
 
@@ -34,8 +35,8 @@ function setup()
 
     for i in 1:params.N
         r = rand()*R_max
-        x = r * GalaxySim.Init.rand_unit_vector()
-        v = 2σ * GalaxySim.Init.rand_tangent(x)
+        x = r * Init.rand_unit_vector()
+        v = 2σ * Init.rand_tangent(x)
         p = Particle(x=x, v=v, m=m, T=T, id=i)
         p.ρ = ρ_mean
         push!(ps, p)
@@ -47,7 +48,7 @@ end
 
 function run()
     ps, params = setup()
-    GalaxySim.Evolve.evolve!(ps, params)
+    evolve!(ps, params)
     println("finished")
 end
 

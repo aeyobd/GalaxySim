@@ -17,9 +17,10 @@ Base.@kwdef mutable struct Particle <: AParticle
 
 
     ρ::F = 1 * m_p
-    h::F = 5 * pc
+    h::F = 3 * pc
     c::F = 0
     μ::F = 1.4
+    Ω::F = 1
 
     # stars::Vector = []
     neighbors::Vector{AParticle} = []
@@ -106,19 +107,32 @@ function Base.show(io::IO, p::Particle)
     println(io)
 
     @printf io "x (pc)          %8.2f\t%8.2f\t%8.2f\n"     (p.x/pc)...
-    @printf io "v (km/s)        %8.2f\t%8.2f\t%8.2f\n"      (p.v/1e5)...
-    @printf io "ρ (m_p/cc)      %8.2e\t%8.2e\n"             (p.ρ/m_p) (p.dρ/m_p)
+    @printf io "v (km s⁻¹)      %8.2f\t%8.2f\t%8.2f\n"      (p.v/1e5)...
+    @printf io "ρ (mₚ/cc)       %8.2e\t%8.2e\n"             (p.ρ/m_p) (p.dρ/m_p)
     @printf io "h (pc)          %8.2e\t%8.2e\n"             (p.h/pc) (p.dh/pc)
     @printf io "u (erg/g)       %8.2e\t%8.2e\n"              p.u p.du
     @printf io "T (K)           %8.3e\n"                     p.T
-    @printf io "P (erg/cm^3)    %8.2e\n"                     p.P
-    @printf io "M⋆ (M_⊙)        %0.2f\n"               (p.m_star/Msun)
+    @printf io "P (erg cm⁻³)    %8.2e\n"                     p.P
+    @printf io "M_⋆ (M_⊙)       %0.2f\n"               (p.m_star/Msun)
     @printf io "t (yr)          %0.2f\n"               (p.t/yr)
     @printf io "dt (yr)         %0.2f\n"               (p.dt/yr)
     @printf io "ID              %d\n"                       p.id
     println(io)
 end
 
+
+function Base.show(io::IO, p::NParticle)
+    println(io)
+
+    @printf io "x (pc)          %8.2f\t%8.2f\t%8.2f\n"     (p.x/pc)...
+    @printf io "v (km s⁻¹)      %8.2f\t%8.2f\t%8.2f\n"      (p.v/1e5)...
+    @printf io "ρ (mₚ/cc)       %8.2e\n"             (p.ρ/m_p) 
+    @printf io "h (pc)          %8.2e\n"             (p.h/pc)
+    @printf io "u (erg/g)       %8.2e\n"              p.u 
+    @printf io "T (K)           %8.3e\n"                     p.T
+    @printf io "P (erg cm⁻³)    %8.2e\n"                     p.P
+    println(io)
+end
 
 
 function Base.show(io::IO, ::MIME"text/plain", p::Particle)

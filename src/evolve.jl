@@ -1,8 +1,16 @@
+"""
 module Evolve
 
-export evolve, evolve!, setup!
 
-using ..Init
+Contains the core of the simulation.
+
+exports evolve!(ps::Vector{Particle}, params::Params)
+
+"""
+module Evolve
+
+export evolve!
+
 using ..Physics
 using ..Density
 using ..Particles
@@ -15,21 +23,15 @@ using Printf
 using Logging
 
 
-function evolve(params)
-    ps = rand_particles(params)
 
-    evolve!(ps, params)
-end
-
-
-function evolve!(ps, params)
+function evolve!(ps::Vector{Particle}, params)
     files = open_files(params)
     e_file = open("energy.dat", "w")
     log_file = open("log.txt", "w")
     global_logger(SimpleLogger(log_file))
 
     println(e_file,     "thermal,kinetic,grav,tot")
-    set_densities!(ps, params)
+
     t = 0
     i = 0
     while t < params.t_end
@@ -39,7 +41,6 @@ function evolve!(ps, params)
         print_time(t, params.t_end)
         if i % params.save_skip == 0
             record_particles(files, ps, params)
-            total_energy(ps, e_file, params)
         end
 
         t += get_dt(ps, t, params)
@@ -71,21 +72,30 @@ function update_particles!(ps, t, params)
 
     # leapfrog integration
     for p in update_ps
-        update_dt!(p, t, params)
-        p.v .+= p.dv * p.dt/2
-        p.x .+= p.v * p.dt
-
         p.t += p.dt
+        p.x .+= p.v * p.dt/2
     end
 
-    tree = make_tree(ps, params)
 
     for p in update_ps
-        update!(p, tree, params)
+        p.v .+= p.dv * p.dt/2
+    end
+
+
+    find_neighbors!(ps, params)
+
+    for p in update_ps
+        solve_ρ!(p, params)
+        update!(p, params)
     end
 
     for p in update_ps
         p.v .+= p.dv * p.dt/2
+        p.x .+= p.v * p.dt/2
+    end
+
+    for p in update_ps
+        update_dt!(p, t, params)
         update_m_star!(p, params)
     end
 end
@@ -112,24 +122,22 @@ end
 
 
 
-function update!(p::Particle, tree, params)
-    find_neighbors!(p, tree, params)
-
-    dh!(p, params)
-    dρ!(p, params)
-
+function update!(p::Particle, params)
     du_P!(p, params)
     du_cond!(p, params)
     dv_DM!(p, params)
     dv_P!(p, params)
-    if params.phys_gravity
-        p.dv_G = zeros(3)
-        dv_G!(p, tree, params)
-    end
-
+    # if params.phys_gravity
+    #     p.dv_G = zeros(3)
+    #     dv_G!(p, tree, params)
+    # end
 
     p.du = p.du_P + p.du_cond
+    advance!(p, params)
+end
 
+
+function advance!(p, params)
     if p.du*p.dt + p.u < 0
         p.du = p.u/p.dt/2
         @debug "energy is near 0"
@@ -139,26 +147,30 @@ function update!(p::Particle, tree, params)
     p.dv .= p.dv_G .+ p.dv_P 
     p.t += p.dt
 
-
-    p.P = R_ig/p.μ * p.ρ * p.T
-    p.T = 2p.μ/(3R_ig) * p.u
-
     # constraints on density evolution
     if p.ρ + p.dρ * p.dt < params.rho_min
         p.dρ = (params.rho_min-p.ρ)/p.dt
+        p.ρ = params.rho_min
         @debug "density hit limit"
+    else
+        p.ρ += p.dρ * p.dt
     end
+
     if p.h + p.dh * p.dt < params.h_min
         p.dh = (params.h_min - p.h)/p.dt
+        p.h = params.h_min
         @debug "h hit limit"
+    else
+        p.h += p.dh * p.dt
     end
 
-    p.h += p.dh * p.dt
-    p.ρ += p.dρ * p.dt
     p.ρ_gas = p.ρ * p.m_gas/p.m
 
-    cs!(p)
+    p.T = temp(p)
+    p.P = pressure(p)
+    p.c = c_sound(p)
 end
+
 
 
 function total_energy(ps, e_file, params)
@@ -191,11 +203,11 @@ end
 function update_m_star!(p::Particle, params)
     dm_star!(p, params)
 
-    # check for positive...
     if p.m_star > p.m
         p.m_star = p.m
         p.dm_star = p.m_gas
     end
+
     p.m_star += p.dm_star * p.dt
 
     p.m_gas = p.m - p.m_star
@@ -212,6 +224,9 @@ function update_dt!(p::Particle, t, params)
     dt_g = 1/sqrt(8π*G*p.ρ)
 
     dt = 0.25*min(dt_f, dt_c, dt_g)
+
+    factor = 2^floor(log2(params.max_dt/dt))
+    dt = params.max_dt/factor
 
     dtn = minimum(q.dt for q in p.neighbors)
     dt = min(dt, params.dt_rel_max * dtn)

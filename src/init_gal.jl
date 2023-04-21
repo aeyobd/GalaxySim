@@ -1,7 +1,3 @@
-module Init
-
-export rand_particles, set_densities!
-
 using LinearAlgebra
 import Roots: find_zero
 import Base: rand

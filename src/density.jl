@@ -1,158 +1,182 @@
 module Density
 
-export dρ!, dh!, W, F_ab, ∇W, ρ, h, dist
+export solve_ρ!, Ω, W, ∇W, F_ab, dW_dh
 
 
 using LinearAlgebra
+using Logging
 
 using ..Constants
 using ..Particles
 
 
-
-function dρ!(p::Particle, params)
-    p.dρ = 0
+function Ω(p::Particle)
+    s = 0.
     for q in p.neighbors
-        p.dρ += q.m*(q.v .- p.v) ⋅ ∇W(p, q)
+        s += q.m * dW_dh(p, q)
     end
-    return p.dρ
+    
+    return 1 - s * dh_dρ(p)
 end
 
 
-function dh!(p::Particle, params)
-    p.dh = 0
-    for q in p.neighbors
-        p.dh += -p.h/(3p.ρ) * q.m*(q.v .- p.v) ⋅ ∇W(p, q)
-    end
-    return p.dh
-end
-
-
-function W(p::AParticle, q::AParticle)
-    return (W(dist(p, q), p.h) + W(dist(p, q), q.h))/2
-end
 
 """
-The kernel function
+The SPH kernel function between two particles
 """
-function W(r, h)
-    if isnan(r) || isnan(h)
-        throw(DomainError("r, h should be real, got $r, $h"))
-    end
-
-    return w(abs(r/h))/h^3
+function W(p::Particle, q::Particle)
+    return W(dist(p, q), p.h)
 end
 
 
-function ∇W(a::AParticle, b::AParticle)
-    # since F is <0, W points towards a
-    r_hat = normalize(b.x .- a.x)
-    return F_ab(a, b) * r_hat
+
+"""
+The kernel gradient between a and b
+
+Returns a vector pointing towards p
+
+"""
+function ∇W(p::Particle, q::Particle)
+    r_hat = normalize(q.x .- p.x)
+    return F_ab(p, q) * r_hat
 end
 
 
-function F_ab(a::AParticle, b::AParticle)
+
+"""
+The scalar part of the (symmetriezed) scalar gradient
+(is negative)
+"""
+function F_ab(a::Particle, b::Particle)
     r = dist(a, b)
-    q1 = abs(r/a.h)
-    q2 = abs(r/b.h)
-    F1 = dw(q1)/a.h^4
-    F2 = dw(q2)/b.h^4
-    return (F1 + F2)/2
+    return dW(r, a.h)
 end
 
 
+
+
 """
-Wendland kernel function
-see https://academic.oup.com/mnras/article/425/2/1068/1187211
+The kernel function for a distance r and smoothing length h
+"""
+W(r::F, h) = 1/h^3 * w(r/h)
+
+dW_dh(p::Particle, q::Particle) = dW_dh(dist(p, q), p.h)
+
+dW_dh(r::F, h) = -3/h^4*w(r/h) + 1/h^4*dw(r/h)
+
+
+
+"""
+cubic spline kernel
+see documentation
 """
 function w(q)
-    σ = 495/32π
-    c1 = max(0., 1-q)^6
-    return σ * c1 * (1 + 6q + 35/3*q^2)
+    σ = 1/π
+    if 0 ≤ q < 1
+        return σ*(1-3/2*q^2 + 3/4*q^3)
+    elseif 1 ≤ q < 2
+        return σ/4 * (2-q)^3
+    else
+        return 0.
+    end
 end
 
+
+
+dW(r::F, h) =  1/h^4*dw(r/h)
 
 function dw(q)
-    σ = 495/32π
-    c2 = max(0, 1-q)^5
-    return -σ * 56/3 * c2 * (q + 5*q^2)
+    σ = 1/π
+    if 0 ≤ q < 1
+        return σ*(-3*q + 9/4*q^2)
+    elseif 1 ≤ q < 2
+        return -3σ/4 * (2-q)^2
+    else
+        return 0.
+    end
 end
-
-
-
-
-
 
 
 
 
 """
 Calculates the distance
-between two positions
+between two particles
 """
-function dist(p::AParticle, q::AParticle)
-    return norm(p.x .- q.x)
+dist(p::Particle, q::Particle) = norm(p.x .- q.x)
+
+
+
+"""
+solve_ρ!(p, params)
+
+solves for the density of ρ using Newton-Raphson's method
+sets ρ, h, and Ω for the particle
+"""
+function solve_ρ!(p, params)
+    h0 = p.h + dh(p, params)
+
+    for i in 1:params.rho_maxiter
+        p.ρ = ρ(p, params)
+        dh0 = -f(p, params)/df(p, params)
+        p.h += dh0
+
+        if abs(dh0/h0) < params.tol
+            p.ρ = ρ(p, p.h, p.neighbors)
+            p.Ω = Ω(p)
+            return p
+        end
+
+        p.h = max(p.h, params.h_min)
+        p.h = min(p.h, params.h_max)
+    end
+
+    @debug "failed to converge"
+    return p
 end
 
 
-# absolute calculations
-#
-"""
-used for initial calculation of ρ
-"""
+
+# h is the kernel density smoothing length
+# h(p::Particle, params) = h(p.ρ, p.m, params.eta)
+# h(ρ1, m, η) = η*(m/abs(ρ1))^(1/3)
+
+ρ_h(p, params) = p.m/(p.h/params.eta)^(3)
+
+
+f(p::Particle, params) = ρ_h(p, params) - p.ρ
+df(p::Particle, params) = -3p.ρ/p.h * Ω(p)
+
 function ρ(p::Particle, params)
-    if length(p.neighbors) < 1
-        println("warning, no neighbors")
-        return params.rho_min
+    s = 0.
+    for q in p.neighbors
+        s += q.m * W(p, q)
     end
 
-    soln =  itersolve(p.ρ, [params.rho_min, params.rho_max], params.rho_maxiter, params.tol
-                     ) do x
-        h1 = h(x, p.m, params.eta)
-        return ρ(p, h1, p.neighbors)
-    end
-
-    return soln
-end
-
-
-
-"""
-x, m should be arraysh x is 3xN and m is N
-ρ = ∑_b m_b W(r_a - r_b; h); (h smoothing length)
-"""
-function ρ(p0, h::Real, particles)
-    s = 0
-    for p in particles
-        s += p.m * W(dist(p, p0), h)
-    end
-    s += p0.m * W(0, h)
     return s 
 end
 
 
 
 
-h(p::Particle, params) = h(p.ρ, p.m, params.eta)
-h(ρ1, m, η) = η*(m/abs(ρ1))^(1/3)
+"""
+Calculates the change in h (density smoothing length) of particle p (in-place)
+"""
+dh(p::Particle, params) = dh_dρ(p) * dρ(p, params)
+dh_dρ(p) = -p.h/3p.ρ
 
 
-function itersolve(f, x0, range, maxiter=100, tol=1e-3)
-    x = x0
-    for i in 1:maxiter
-        dx = f(x) - x
-        x += dx
-        if abs(dx/x) < tol
-            return x
-        end
-
-        # apply range limits
-        x = max(x, range[1])
-        x = min(x, range[2])
+"""
+Calculates the change in density of particle p (in-place)
+"""
+function dρ(p::Particle, params)
+    s = 0
+    for q in p.neighbors
+        s += q.m*(q.v .- p.v) ⋅ ∇W(p, q)
     end
-    return x
-end
 
+    return s/p.Ω
+end
 
 
 

@@ -7,10 +7,11 @@ using QuadGK
 import GalaxySim.Constants: R_ig, m_p, G, k_B
 
 function setup()
-    params = GalaxySim.Constants.Params("src/sedov.toml")
+    params = Params("src/sedov.toml")
 
-    T = params.T0
-    Th = 1e3
+
+    T = 10
+    Th = 1e4
 
     R_max = 10*pc
     M_tot = 10Msun
@@ -34,7 +35,7 @@ end
 
 function run()
     ps, params = setup()
-    GalaxySim.Evolve.evolve!(ps, params)
+    evolve!(ps, params)
     println("finished")
 end
 

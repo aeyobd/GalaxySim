@@ -3,14 +3,13 @@ module Physics
 export dm_star!
 export du_cond!, du_P!
 export dv_DM!, dv_P!
-export cs!
+export c_sound, pressure, temp
 
 
 using LinearAlgebra
 using Debugger
 
 using ..Particles
-using ..Init
 using ..Constants
 using ..Density
 
@@ -19,8 +18,16 @@ using ..Density
 
 
 
+"""
+dv_DM!(p::Particle, params::Params) -> Vector{3, F}
 
-function dv_DM!(p, params)
+Acceleration due to dark matter
+Modifies the dv_DM attribute of the
+particle in-place.
+
+I assume a NFW profile.
+"""
+function dv_DM!(p::Particle, params)
     if !params.phys_DM
         return zeros(3)
     end
@@ -29,6 +36,11 @@ function dv_DM!(p, params)
 end
 
 
+
+"""
+Helper function for dv_DM!, returns scalar part of acceleration due
+to DM
+"""
 function a_DM(r::F, params)
     if r == 0
         return 0
@@ -37,6 +49,10 @@ function a_DM(r::F, params)
 end
 
 
+
+"""
+Acceleration due to pressure (and viscosity)
+"""
 function dv_P!(p::Particle, params)
     if !params.phys_pressure
         return 0.
@@ -44,10 +60,12 @@ function dv_P!(p::Particle, params)
 
     p.dv_P .= zeros(3)
     for q in p.neighbors
-        p.dv_P .+= -q.m*(p.P/p.ρ^2 + q.P/q.ρ^2 + Π(p, q, params)) * ∇W(p, q) 
+        p.dv_P .+= -q.m .*(p.P/p.ρ^2 .+ q.P/q.ρ^2 .+ Π(p, q, params)) .* ∇W(p, q)
     end
     return p.dv_P
 end
+
+
 
 
 function du_cond!(p::Particle, params)
@@ -62,10 +80,15 @@ function du_cond!(p::Particle, params)
     for q in p.neighbors
         kq = params.K_cond/q.ρ
         ρ_pq = (p.ρ + q.ρ)/2
-        p.du_cond += - q.m * (kp+kq) * (p.u-q.u) * (q.x-p.x) ⋅ ∇W(p, q) / (
+        p.du_cond += - q.m * (kp+kq) * (p.u-q.u) * (q.x-p.x) .* ∇W(p, q) / (
                                 ρ_pq * dist(p, q)^2 + params.eta_visc^2*p.h^2)
     end
 
+    if !isfinite(p.du_cond)
+        println("nan du")
+        println(p)
+        exit()
+    end
     return p.du_cond
 end
 
@@ -78,15 +101,27 @@ function du_P!(p, params)
     p.du_P = 0.
 
     for q in p.neighbors
-        p.du_P += 1/2*q.m*(p.P/p.ρ^2 + q.P/q.ρ^2 + Π(p, q, params)) * (q.v-p.v) ⋅ ∇W(p, q)
+        p.du_P += -1/2*q.m*(p.P/p.ρ^2 + q.P/q.ρ^2 + Π(p, q, params)) * (q.v-p.v) ⋅ ∇W(p, q)
+        if !isfinite(p.du_P)
+            println("nan duP")
+            println(p)
+            println(q)
+            exit()
+        end
     end
+
 
     return p.du_P
 end
 
 
+
+"""
+Viscosity function between two particles
+"""
 function Π(p, q, params)
-    vr = (p.x - q.x) ⋅ (p.v - q.v)
+    # calculate the dot product of v and r
+    vr = (q.x - p.x) ⋅ (q.v - p.v)
     if !params.phys_visc || vr > 0 
         return 0.
     end
@@ -102,24 +137,31 @@ function Π(p, q, params)
 end
 
 
-function cs!(p)
+
+"""
+Sound speed in the gas of p (in-place)
+"""
+function c_sound(p)
     if p.T >= 0
-        p.c = sqrt(5/3 * R_ig * p.T/p.μ)
+        return sqrt(5/3 * R_ig * p.T/p.μ)
     else
         println(p)
         throw(DomainError(p.T, "T must be positive!"))
     end
-    return p.c
 end
 
+
+"""
+Pressure of particle p
+(from current energy and μ)
+"""
+pressure(p) = 2/3 * p.u * p.ρ
+temp(p) = 2p.μ/(3R_ig) * p.u
 
 
 
 """
-energy per unit pass
-e = u + v^2/2
-P=(γ-1)ρ u
-γ=5/3
+The change in star formation mass (in-place) for p
 """
 function dm_star!(p::Particle, params)
     if !params.phys_star_formation

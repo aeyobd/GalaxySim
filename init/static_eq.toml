@@ -35,20 +35,12 @@ r_plummer = 0.1 # Gravitational softening radius, in terms of h
 
 
 ################# Initial Conditions #####################
-T0 = 100         # initial temperature at the center
-v_0 = 0         # factor to multiply v by (initalized as v_viral)
-sigma_v = 0     # how much scatter in v/
-sigma_M = 0     # relative spread of particle masses
-
 # these are in Msun
 M_tot = 1e8
-M_bary = 1e6
 
 # in parsecs
 R_virial = 1e3
 c = 10          # density compactness parameters
-R_bary = 1e2    # baryonic dist radius
-gamma = 1.5     # baryonic compactness parameter
 
 
 
@@ -56,13 +48,10 @@ gamma = 1.5     # baryonic compactness parameter
 K_cond = 2e7    # conduction constant
 n_K = 0.05
 sfe = 0.00      # star formation effeciency
-mu_0 = 1.4      # mean mass per gas particle in proton masses (mix of H and He)
 
 Jfuv = 0        # far UV energy density
 Gamma_0 = 0     # stellar feedback factor
 f_rad = 0       # radiative heating fraction
-
-rho_0 = 1e10      # minimum star density for star form in protons/cm^3
 
 
 alpha_visc = 1

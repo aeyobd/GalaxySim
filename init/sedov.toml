@@ -5,24 +5,21 @@ name = "sedov" # name to save to
 
 save_skip = 100  # number of frames to skip when saving
 N = 500         # number of simulation particles
-t_end = 1e8     # years to integrate for
+t_end = 1e7     # years to integrate for
 
 adaptive = true
-dt_min = 1e3    # minimum timestep
-dt_max = 1e7
+dt_min = 1e2    # minimum timestep
+dt_max = 1e5
 dt_rel_max = 10
 
 theta = 0.05    # BH theta parameter
 eta = 2.5         # density estimation parameter
 
-M_bary = 1e6
-T0 = 10
-
 # density estimation parameters
 tol = 1e-3
 rho_maxiter = 40
 rho_max = 1e20
-rho_min = 1e-40
+rho_min = 1e-20
 h_max = 10 #pc
 h_min = 0.1 #pc
 
@@ -33,12 +30,12 @@ phys_gravity = false
 phys_DM = false
 
 phys_pressure = true
-phys_conduction = false
+phys_visc = true
+phys_conduction = true
 
 phys_star_formation = false
 
 
-phys_visc = false
 alpha_visc = 1
 beta_visc = 2
 eta_visc = 0.1
