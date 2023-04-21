@@ -7,7 +7,6 @@ using StaticArrays
 
 using ..Constants
 using ..Particles
-using ..Tree
 using ..Density
 
 

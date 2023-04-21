@@ -40,19 +40,7 @@ end
 
 function run()
     params, ps = setup()
-    println(ps)
-    println("initial energy")
-    e = sum(0.5*p.m*norm(p.v)^2 for p in ps)
-    println(e)
-    t_int = 0
-
     evolve!(ps, params)
-
-
-    println("final energy")
-    e = sum(0.5*p.m*norm(p.v)^2 for p in ps)
-    println(e)
-
     println("finished")
 end
 

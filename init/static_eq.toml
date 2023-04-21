@@ -18,25 +18,21 @@ dt_rel_max = 16
 adaptive = true
 
 
-eta = 1.2         # density estimation parameter
+eta = 1.28         # density estimation parameter
 
 # density estimation parameters
 tol = 1e-3
 h_maxiter = 100
-h_min = 0.001
-h_max = 1000
+h_min = 0.0001
+h_max = 10000
 
 
-r_plummer = 0.1 # Gravitational softening radius, in terms of h
+phys_pressure = false
+phys_gravity = true
 
-
-phys_gravity = false
 phys_DM = false
-
-phys_pressure = true
 phys_conduction = false
 phys_visc = false
-
 phys_feedback = false
 phys_star_formation = false
 

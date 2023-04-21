@@ -14,7 +14,6 @@ export evolve!
 using ..Physics
 using ..Density
 using ..Particles
-using ..Tree
 using ..Constants
 using ..GalFiles
 using ..Gravity
@@ -26,15 +25,17 @@ using Logging
 
 
 function evolve!(ps::Vector{Particle}, params)
-    files = open_files(params)
-    e_file = open("energy.dat", "w")
+
+    # open up files to write to 
     log_file = open("log.txt", "w")
     global_logger(SimpleLogger(log_file))
 
+    files = open_files(params)
+    e_file = open("energy.dat", "w")
     println(e_file,     "thermal,kinetic,grav,tot")
 
     t = 0
-    i = 0
+    i = 0 # keep track of the number of frames
     while t < params.t_end
         update_particles!(ps, t, params)
 

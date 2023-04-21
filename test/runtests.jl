@@ -9,11 +9,12 @@ using GalaxySim
 
 @testset "density.jl" begin
     # test that W is normalized
-    @test quadgk(x->GalaxySim.Density.W(x,1)*4π*x^2, 0, 5)[1] ≈ 1 atol = 0.0001
+    @test quadgk(x->GalaxySim.Density.W(x,2)*4π*x^2, 0, 5)[1] ≈ 1 atol = 0.0001
 
     # Test that the analytic derivative works
     s = 0
-    for i in 0:0.5:10
+    s1 = 0
+    for i in 0.5:0.5:10
         x = i*pc
         p1 = Particle(x=zeros(3), v=zeros(3), m=1Msun, h=1pc)
         p2 = Particle(x=[x, 0, 0], v=zeros(3), m=1Msun)
@@ -21,21 +22,30 @@ using GalaxySim
         expected = derivative(x->GalaxySim.Density.W(x, 1pc), x) 
         predicted = norm(GalaxySim.Density.∇W(p1, p2))
         s += abs(expected - predicted)
+
+        expected = derivative(x->GalaxySim.Density.W(GalaxySim.Density.dist(p1, p2), x), x) 
+        predicted = GalaxySim.Density.dW_dh(p1, p2)
+        s1 += abs(expected - predicted)
     end
     @test s ≈ 0 atol = 1e-5
+    @test s1 ≈ 0 atol = 1e-5
 
 
     # test density calculation for particles in a box
     params = Params("../init/static_eq.toml")
     N = params.N
-    m = 1
+    m = 1Msun
+    r = 100pc
     ps = Particle[]
     for i in 1:params.N
-        x = rand(3) * pc
-        push!(ps, Particle(x=x, v=zeros(3), m=1))
+        x = rand(3) * r
+        push!(ps, Particle(x=x, v=zeros(3), m=m))
     end
 
-    GalaxySim.Tree.find_neighbors!(ps, params)
+    GalaxySim.Density.find_neighbors!(ps, params)
+    for p in ps
+        GalaxySim.Density.solve_ρ!(p, params)
+    end
 
     ρ_predicted = 0
     for p in ps
@@ -44,9 +54,9 @@ using GalaxySim
     end
 
     ρ_predicted /= N
-    ρ_expected = N*m/pc^3
+    ρ_expected = N*m/(r^3)
 
-    @test ρ_predicted ≈ ρ_expected atol = 1e-2
+    @test ρ_predicted ≈ ρ_expected rtol = 1e-2
 
 
 end

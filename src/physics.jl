@@ -60,9 +60,6 @@ function dv_P!(p::Particle, params)
 
     p.dv_P .= zeros(3)
     for q in p.neighbors
-        if q == p
-            continue
-        end
         p.dv_P .+= -q.m .* (
             p.P/p.ρ^2/p.Ω .* ∇W(p, q)
             .- q.P/q.ρ^2/q.Ω .* ∇W(q, p)

@@ -1,15 +1,47 @@
 module Density
 
-export solve_ρ!
+export solve_ρ!, find_neighbors!
 export Ω, dh_dρ, dist
 export W, ∇W, dW_dh, dW
 
 
 using LinearAlgebra
 using Logging
+using NearestNeighbors
+using Printf
 
 using ..Constants
 using ..Particles
+
+
+
+
+
+"""
+get the nearist parlticles 
+"""
+function find_neighbors!(ps, params)
+    x = [p.x for p in ps]
+    tree = BallTree(x)
+    idxs, dists = knn(tree, x, params.NN, true)
+
+    for i in 1:params.N
+        idx = idxs[i]
+        ds = dists[i]
+        if any(idx .> params.N) || any(idx .<= 0)
+            println(ps)
+            print(ps[i])
+            throw(error("neighbor search failed"))
+        end
+        filt = ds .> 0
+
+        ps[i].neighbors = ps[idx[filt]]
+        ps[i].distances = ds[filt]
+    end
+
+    return ps
+end
+
 
 
 function Ω(p::Particle)
@@ -41,7 +73,7 @@ W(r, h) = 1/h^3 * w(r/h)
 
 # note all derivatives are negative
 dW_dh(p::Particle, q::Particle) = dW_dh(dist(p, q), p.h)
-dW_dh(r, h) = -3/h^4*w(r/h) + 1/h^4*dw(r/h)
+dW_dh(r, h) = -3/h^4*w(r/h) - r/h^5*dw(r/h)
 
 
 dW(p::Particle, q::Particle) = dW(dist(p, q), p.h)
@@ -80,29 +112,52 @@ end
 
 
 
-
 """
 solve_ρ!(p, params)
 
 solves for the density of ρ using Newton-Raphson's method
 sets ρ, h, and Ω for the particle
 """
-function solve_ρ!(p, params)
+function solve_ρ!(p, params; save=false)
+    if save
+        file = open("density.dat", "w")
+        println(file, "h,ρ,Ω")
+        println(file, "$(p.h), $(p.ρ), $(p.Ω)")
+    end
+
     h0 = p.h + dh(p, params)*p.dt
     h0 = max(h0, params.h_min)
     h0 = min(h0, params.h_max)
-    h1 = h0
-    p.h = h0
     if length(p.neighbors) < 1
         return 
     end
 
+    if save
+        file2 = open("density_f.dat", "w")
+        println(file2, "h,f,df")
+        for i in LinRange(-2, 4, 30)
+            h = 10^i * pc
+            p.h = h
+            x = f(p, params)
+            dx = df(p, params)
+            println(file2, "$(h/pc), $(x/m_p), $(dx/m_p*pc)")
+        end
+        close(file2)
+    end
+
+    h1 = h0
+    p.h = h0
+
+
     for i in 1:params.h_maxiter
         p.ρ = ρ(p, params)
         p.Ω = Ω(p)
-        p.h += -f(p, params)/df(p, params)
+        p.h -= f(p, params)/df(p, params)/2
         p.h = max(p.h, params.h_min)
         p.h = min(p.h, params.h_max)
+        if save
+            println(file, "$(p.h/pc), $(p.ρ*m_p), $(p.Ω)")
+        end
 
         if abs((h1-p.h)/h0) < params.tol
             p.ρ = ρ(p, params)
@@ -113,6 +168,10 @@ function solve_ρ!(p, params)
     end
 
     @debug "failed to converge"
+
+    if save
+        close(file)
+    end
     return p
 end
 
@@ -122,21 +181,13 @@ end
 # h(p::Particle, params) = h(p.ρ, p.m, params.eta)
 # h(ρ1, m, η) = η*(m/abs(ρ1))^(1/3)
 
-ρ_h(p, params) = p.m/(p.h/params.eta)^(3)
 
 
 f(p::Particle, params) = ρ_h(p, params) - p.ρ
-df(p::Particle, params) = -3p.ρ/p.h * p.Ω
+df(p::Particle, params) = p.Ω/dh_dρ(p)
 
 
-"""
-Calculates the change in h (density smoothing length) of particle p (in-place)
-"""
-dh(p::Particle, params) = dh_dρ(p) * dρ(p, params) * p.dt
-dh_dρ(p) = -p.h/3p.ρ
-
-
-
+ρ_h(p, params) = p.m/(p.h/params.eta)^(3)
 
 function ρ(p::Particle, params)
     s = 0.
@@ -146,6 +197,16 @@ function ρ(p::Particle, params)
     s += p.m * W(0.0, p.h)
     return s 
 end
+
+
+
+"""
+Calculates the change in h (density smoothing length) of particle p (in-place)
+"""
+dh(p::Particle, params) = dh_dρ(p) * dρ(p, params) * p.dt
+dh_dρ(p) = -p.h/3p.ρ
+
+
 
 
 """
