@@ -120,6 +120,10 @@ solves for the density of ρ using Newton-Raphson's method
 sets ρ, h, and Ω for the particle
 """
 function solve_ρ!(p, params; save=false)
+    if length(p.neighbors) < 1
+        return 
+    end
+
     if save
         file = open("density.dat", "w")
         println(file, "h,ρ,Ω,f")
@@ -127,9 +131,7 @@ function solve_ρ!(p, params; save=false)
     end
 
     h0 = p.h + dh(p, params)*p.dt
-    if length(p.neighbors) < 1
-        return 
-    end
+
 
     if save
         file2 = open("density_f.dat", "w")
@@ -152,7 +154,8 @@ function solve_ρ!(p, params; save=false)
         p.ρ = ρ(p, params)
         p.Ω = Ω(p)
         p.h -= f(p, params)/df(p, params)
-        if p.h < params.h_min || p.h > params.h_max
+
+        if !(params.h_min<=p.h<=params.h_max)
             solve_ρ_bisection!(p, params)
             return
         end
@@ -170,15 +173,18 @@ function solve_ρ!(p, params; save=false)
         h1 = p.h
     end
 
-    @debug "failed to converge"
-
     if save
         close(file)
     end
-    return p
+
+    return solve_ρ_bisection!(p, params)
 end
 
+
+
 function solve_ρ_bisection!(p, params)
+    @info "newton's method failed, trying bisection"
+
     h_l = params.h_min
     h_h = params.h_max
     f_l = f(p, h_l, params)
@@ -186,26 +192,26 @@ function solve_ρ_bisection!(p, params)
     if sign(f_l) == sign(f_h)
         if abs(f_l) < abs(f_h)
             p.h = h_l
-            p.ρ = ρ(p, p.h, params)
-            p.Ω = Ω(p)
         else 
             p.h = h_h
-            p.ρ = ρ(p, p.h, params)
-            p.Ω = Ω(p)
         end
-        return 
+
+        p.ρ = ρ(p, p.h, params)
+        p.ρ = ρ(p, p.h, params)
+        p.Ω = Ω(p)
+        return p
     end
 
     for i in 1:params.h_maxiter
         h_mid = (h_l + h_h)/2
+        p.h = h_mid
+        p.ρ = ρ(p, p.h, params)
         f_mid = f(p, h_mid, params)
 
-        if sign(f_mid) == 0 || abs(h_l -h_h)/h_mid < params.tol
-            p.h = h_mid
+        if sign(f_mid) == 0 || abs(h_l-h_h)/h_mid < params.tol
             p.ρ = ρ(p, params)
             p.Ω = Ω(p)
-            return
-
+            return p
         elseif sign(f_mid) == sign(f_l)
             h_l = h_mid
             f_l = f_mid
@@ -213,8 +219,10 @@ function solve_ρ_bisection!(p, params)
             h_h = h_mid
             f_h = f_mid
         end
-
     end
+
+    p.Ω = Ω(p)
+    return p
 end
 
 

@@ -8,6 +8,8 @@ N = 2         # number of simulation particles
 NN = 2
 t_end = 1e9     # years to integrate for
 
+h_max = 100
+
 adaptive = true
 
 ################# Physics #########################

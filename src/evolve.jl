@@ -27,7 +27,7 @@ using Logging
 function evolve!(ps::Vector{Particle}, params)
     # open up files to write to 
     log_file = open("$(params.name)/log.txt", "w")
-    global_logger(SimpleLogger(log_file))
+    global_logger(SimpleLogger(log_file, Logging.Debug))
 
     files = open_files(params)
     e_file = open("$(params.name)/energy.dat", "w")
@@ -213,6 +213,7 @@ function update_dt!(p::Particle, t, params)
     end
     dt_f = p.h/norm(p.dv)
     dt_c = p.h/p.c/(1+0.6*params.alpha_visc)
+
     dt_g = 1/sqrt(8π*G*p.ρ)
 
     dt = 0.25*min(dt_f, dt_c, dt_g)

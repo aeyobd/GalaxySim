@@ -11,7 +11,7 @@ function setup()
 
     r_0 = 10pc
     M_0 = 10Msun
-    v_0 = sqrt(G*M_0/r_0)
+    v_0 = 3*sqrt(G*M_0/r_0)
 
     v_vec_1 = [1,0,0] * v_0
     v_vec_2 = [-1,0,0] * v_0

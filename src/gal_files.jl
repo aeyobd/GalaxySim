@@ -43,10 +43,7 @@ FILE_NAMES = (
     "P",
     "du_P",
     "du_C",
-    "du_V",
-    "du_cool",
     "dv_P",
-    "dv_V",
     "dv_G",
    )
 

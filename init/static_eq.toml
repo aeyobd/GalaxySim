@@ -10,10 +10,10 @@ save_skip = 25  # number of frames to skip when saving
 
 N = 500         # number of simulation particles
 NN = 50
-t_end = 1e7     # years to integrate for
+t_end = 1e8     # years to integrate for
 
-dt_max = 256e3
-dt_min = 1e3
+dt_max = 1024e4
+dt_min = 1e4
 dt_rel_max = 16
 adaptive = true
 
