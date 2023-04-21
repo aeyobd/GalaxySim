@@ -20,7 +20,7 @@ function setup()
     ρ(r) = C / r^2
     M(r) = 4*π * C * r
 
-    R_max = 30*pc
+    R_max = 200pc
     M_tot = M(R_max)
     print("total mass = ")
     println(M_tot/Msun)

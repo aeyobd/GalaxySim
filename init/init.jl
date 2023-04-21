@@ -1,6 +1,6 @@
 module Init
 
-export rand_particles
+export rand_particles, rand_unit_vector
 
 using LinearAlgebra
 import Roots: find_zero

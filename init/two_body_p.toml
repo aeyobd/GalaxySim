@@ -5,27 +5,10 @@ name = "two_body_p" # name to save to
 
 save_skip = 100  # number of frames to skip when saving
 N = 2         # number of simulation particles
+NN = 2
 t_end = 1e9     # years to integrate for
 
 adaptive = true
-dt_min = 1e3    # minimum timestep
-dt_max = 1e7
-dt_rel_max = 10
-
-theta = 0.05    # BH theta parameter
-eta = 2.5         # density estimation parameter
-
-M_bary = 1e6
-T0 = 10
-
-# density estimation parameters
-tol = 1e-3
-rho_maxiter = 40
-rho_max = 1e20
-rho_min = 1e-40
-h_max = 10 #pc
-h_min = 0.1 #pc
-
 
 ################# Physics #########################
 
@@ -39,8 +22,3 @@ phys_star_formation = false
 
 
 phys_visc = false
-alpha_visc = 1
-beta_visc = 2
-eta_visc = 0.1
-
-r_plummer = 0.2 # Gravitational softening radius, in terms of h

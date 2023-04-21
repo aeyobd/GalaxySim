@@ -92,10 +92,13 @@ end
 ϕ(p::Particle, q::Particle) = ϕ(dist(p, q), p.h)
 
 function L_grav(p::Particle, q::Particle)
-    return -G/2 * p.m * q.m * (ϕ(p, q) + ϕ(q, p))/2
+    return G/2 * p.m * q.m * (ϕ(p, q) + ϕ(q, p))/2
 end
 
-function L_grav(ps)
+function L_grav(ps, params)
+    if !params.phys_gravity
+        return 0.
+    end
     s = 0
     for p in ps
         for q in ps

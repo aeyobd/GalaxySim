@@ -68,6 +68,7 @@ W(p::Particle, q::Particle) = W(dist(p, q), p.h)
 W(r, h) = 1/h^3 * w(r/h)
 
 
+# ∇W points towards p
 ∇W(p::Particle, q::Particle) = dist(p, q)==0 ? zeros(3) : normalize(q.x .- p.x) * dW(p, q)
 
 
@@ -121,13 +122,11 @@ sets ρ, h, and Ω for the particle
 function solve_ρ!(p, params; save=false)
     if save
         file = open("density.dat", "w")
-        println(file, "h,ρ,Ω")
-        println(file, "$(p.h), $(p.ρ), $(p.Ω)")
+        println(file, "h,ρ,Ω,f")
+        println(file, "$(p.h/pc),$(p.ρ/m_p),$(p.Ω),$(f(p,params)/m_p)")
     end
 
     h0 = p.h + dh(p, params)*p.dt
-    h0 = max(h0, params.h_min)
-    h0 = min(h0, params.h_max)
     if length(p.neighbors) < 1
         return 
     end
@@ -135,12 +134,12 @@ function solve_ρ!(p, params; save=false)
     if save
         file2 = open("density_f.dat", "w")
         println(file2, "h,f,df")
-        for i in LinRange(-2, 4, 30)
+        for i in LinRange(0.5, 2, 30)
             h = 10^i * pc
             p.h = h
-            x = f(p, params)
+            x = f(p, p.h, params)
             dx = df(p, params)
-            println(file2, "$(h/pc), $(x/m_p), $(dx/m_p*pc)")
+            println(file2, "$(p.h/pc),$(x/m_p),$(dx/m_p*pc)")
         end
         close(file2)
     end
@@ -152,11 +151,15 @@ function solve_ρ!(p, params; save=false)
     for i in 1:params.h_maxiter
         p.ρ = ρ(p, params)
         p.Ω = Ω(p)
-        p.h -= f(p, params)/df(p, params)/2
-        p.h = max(p.h, params.h_min)
-        p.h = min(p.h, params.h_max)
+        p.h -= f(p, params)/df(p, params)
+        if p.h < params.h_min || p.h > params.h_max
+            solve_ρ_bisection!(p, params)
+            return
+        end
+
         if save
-            println(file, "$(p.h/pc), $(p.ρ*m_p), $(p.Ω)")
+            x = f(p, p.h, params)
+            println(file, "$(p.h/pc),$(p.ρ/m_p),$(p.Ω),$(x/m_p)")
         end
 
         if abs((h1-p.h)/h0) < params.tol
@@ -175,6 +178,45 @@ function solve_ρ!(p, params; save=false)
     return p
 end
 
+function solve_ρ_bisection!(p, params)
+    h_l = params.h_min
+    h_h = params.h_max
+    f_l = f(p, h_l, params)
+    f_h = f(p, h_h, params)
+    if sign(f_l) == sign(f_h)
+        if abs(f_l) < abs(f_h)
+            p.h = h_l
+            p.ρ = ρ(p, p.h, params)
+            p.Ω = Ω(p)
+        else 
+            p.h = h_h
+            p.ρ = ρ(p, p.h, params)
+            p.Ω = Ω(p)
+        end
+        return 
+    end
+
+    for i in 1:params.h_maxiter
+        h_mid = (h_l + h_h)/2
+        f_mid = f(p, h_mid, params)
+
+        if sign(f_mid) == 0 || abs(h_l -h_h)/h_mid < params.tol
+            p.h = h_mid
+            p.ρ = ρ(p, params)
+            p.Ω = Ω(p)
+            return
+
+        elseif sign(f_mid) == sign(f_l)
+            h_l = h_mid
+            f_l = f_mid
+        else 
+            h_h = h_mid
+            f_h = f_mid
+        end
+
+    end
+end
+
 
 
 # h is the kernel density smoothing length
@@ -184,15 +226,28 @@ end
 
 
 f(p::Particle, params) = ρ_h(p, params) - p.ρ
+f(p::Particle, h, params) = ρ_h(p, h, params) - ρ(p, h, params)
+
 df(p::Particle, params) = p.Ω/dh_dρ(p)
 
 
 ρ_h(p, params) = p.m/(p.h/params.eta)^(3)
+ρ_h(p, h, params) = p.m/(h/params.eta)^(3)
+
+function ρ(p::Particle, h, params)
+    s = 0.
+    for (q, d) in zip(p.neighbors, p.distances)
+        s += q.m * W(d, h)
+    end
+    s += p.m * W(0.0, h)
+    return s 
+end
+
 
 function ρ(p::Particle, params)
     s = 0.
-    for q in p.neighbors
-        s += q.m * W(p, q)
+    for (q, d) in zip(p.neighbors, p.distances)
+        s += q.m * W(d, p.h)
     end
     s += p.m * W(0.0, p.h)
     return s 

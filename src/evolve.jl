@@ -25,14 +25,24 @@ using Logging
 
 
 function evolve!(ps::Vector{Particle}, params)
-
     # open up files to write to 
-    log_file = open("log.txt", "w")
+    log_file = open("$(params.name)/log.txt", "w")
     global_logger(SimpleLogger(log_file))
 
     files = open_files(params)
-    e_file = open("energy.dat", "w")
+    e_file = open("$(params.name)/energy.dat", "w")
     println(e_file,     "thermal,kinetic,grav,tot")
+
+    find_neighbors!(ps, params)
+    for p in ps
+        solve_ρ!(p, params)
+        p.T = temp(p)
+        p.P = pressure(p)
+        p.c = c_sound(p)
+    end
+
+    _, _, _, tot = energy(ps, params)
+    println("initial energy: $tot")
 
     t = 0
     i = 0 # keep track of the number of frames
@@ -42,13 +52,16 @@ function evolve!(ps::Vector{Particle}, params)
         # only save once every so many frames
         if i % params.save_skip == 0
             record_particles(files, ps, params)
-            total_energy(ps, e_file, params)
+            save_energy(ps, e_file, params)
         end
 
         print_time(t, params.t_end)
         t += get_dt(ps, t, params)
         i += 1
     end
+
+    _, _, _, tot = energy(ps, params)
+    println("final energy: $tot")
 
     close_files(files)
     close(e_file)
@@ -115,7 +128,7 @@ function which_update(ps, t, params)
     ps_new = Particle[]
 
     for p in ps
-        if p.t + p.dt < t
+        if p.t + p.dt/2 < t # update particle when t = t_i+1/2
             push!(ps_new, p)
         end
     end
@@ -154,8 +167,8 @@ end
 
 
 
-function total_energy(ps, e_file, params)
-    grav = L_grav(ps)
+function energy(ps, params)
+    grav = L_grav(ps, params)
 
     thermal = 0.
     kinetic = 0.
@@ -166,15 +179,17 @@ function total_energy(ps, e_file, params)
 
     tot = thermal + kinetic + grav
 
-    @printf e_file "%8.4e, %8.4e, %8.4e, %8.4e\n" thermal kinetic grav tot
-
-    if ps[1].t == 0
-        println("initial energy: $tot")
-    elseif ps[1].t + ps[1].dt >= params.t_end
-        println("final energy: $tot")
-    end
-
+    return thermal, kinetic, grav, tot
 end
+
+
+
+function save_energy(ps, e_file, params)
+    thermal, kinetic, grav, tot = energy(ps, params)
+
+    @printf e_file "%8.4e, %8.4e, %8.4e, %8.4e\n" thermal kinetic grav tot
+end
+
 
 
 function update_m_star!(p::Particle, params)

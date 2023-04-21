@@ -12,22 +12,13 @@ N = 500         # number of simulation particles
 NN = 50
 t_end = 1e7     # years to integrate for
 
-dt_max = 2048e3
+dt_max = 256e3
 dt_min = 1e3
 dt_rel_max = 16
 adaptive = true
 
 
-eta = 1.28         # density estimation parameter
-
-# density estimation parameters
-tol = 1e-3
-h_maxiter = 100
-h_min = 0.0001
-h_max = 10000
-
-
-phys_pressure = false
+phys_pressure = true
 phys_gravity = true
 
 phys_DM = false

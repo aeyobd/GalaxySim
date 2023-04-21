@@ -6,13 +6,14 @@ name = "two_body"
 
 N = 2         # number of simulation particles
 NN = 2
-t_end = 1e9     # years to integrate for
+t_end = 1e10     # years to integrate for
 save_skip = 10
 
 eta = 1         # density estimation parameter
 
 dt_min = 1e3    # minimum timestep
-dt_max = 128e3    # minimum timestep
+dt_max = 1024    # minimum timestep
+
 adaptive=true
 
 dt_rel_max = 16    # minimum timestep

@@ -30,9 +30,9 @@ using TOML # to read in options from file
     dt_max::F = 1024e3yr            # maximum allowed timestep
     dt_rel_max::F = 16              # maximum dt relative to neighbors
     
-    eta::F = 1.3                    # density scale parameters
-    h_max::F = 100pc                # smoothing length 
-    h_min::F = 0.1pc
+    eta::F = 0.74                    # density scale parameters
+    h_max::F = 1000pc                # smoothing length 
+    h_min::F = 0.01pc
     h_maxiter::Int = 20             # maximum iterations when solving for h
     tol::F = 1e-3                   # required accuracy for h
 

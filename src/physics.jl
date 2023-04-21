@@ -61,9 +61,10 @@ function dv_P!(p::Particle, params)
     p.dv_P .= zeros(3)
     for q in p.neighbors
         p.dv_P .+= -q.m .* (
-            p.P/p.ρ^2/p.Ω .* ∇W(p, q)
-            .- q.P/q.ρ^2/q.Ω .* ∇W(q, p)
-            .+ Π(p, q, params)) 
+            -p.P/p.ρ^2/p.Ω .* ∇W(p, q)
+            .+ q.P/q.ρ^2/q.Ω .* ∇W(q, p)
+            .+ Π(p, q, params)
+           ) 
     end
     return p.dv_P
 end
@@ -105,7 +106,7 @@ function du_P!(p, params)
 
     for q in p.neighbors
         if q != p
-            s += q.m * (p.v .- q.v) ⋅ normalize(p.x - q.x) * dW(p, q)
+            s += q.m * (q.v .- p.v) ⋅ ∇W(p, q)
         end
     end
 

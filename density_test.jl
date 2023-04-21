@@ -20,11 +20,13 @@ function setup()
     ρ(r) = C / r^2
     M(r) = 4*π * C * r
 
-    R_max = 1000*pc
+    R_max = 100*pc
     M_tot = M(R_max)
     println(M_tot/Msun)
     print("mean density = ")
-    ρ_mean = M_tot/R_max^3 / m_p
+    ρ_mean = M_tot/R_max^3 / m_p / 2^3
+    println(ρ_mean)
+
 
     m = M_tot/params.N
 
@@ -35,8 +37,7 @@ function setup()
             x = zeros(3)
             v = zeros(3)
         else
-            r = rand()*R_max
-            x = r * Init.rand_unit_vector()
+            x = R_max*(2*randn(3) .- 1)
             v = 2σ * Init.rand_tangent(x)
         end
         p = Particle(x=x, v=v, m=m, T=T, id=i)
@@ -54,6 +55,11 @@ function run()
         GalaxySim.Density.solve_ρ!(p, params)
     end
     GalaxySim.Density.solve_ρ!(ps[1], params, save=true)
+
+    print("ρ = ")
+    println(ps[1].ρ/m_p)
+    print("h = ")
+    println(ps[1].h/pc)
 end
 
 

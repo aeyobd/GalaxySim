@@ -7,7 +7,7 @@ using LinearAlgebra
 
 
 function setup()
-    params = GalaxySim.Constants.Params("src/two_body_p.toml")
+    params = Params("init/two_body_p.toml")
 
     r_0 = 10pc
     M_0 = 10Msun
