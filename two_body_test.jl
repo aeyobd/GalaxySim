@@ -7,7 +7,7 @@ using LinearAlgebra
 
 
 function setup()
-    params = GalaxySim.Constants.Params("src/two_body.toml")
+    params = Params("init/two_body.toml")
 
     r_0 = 10pc
     M_0 = 10Msun
@@ -46,7 +46,7 @@ function run()
     println(e)
     t_int = 0
 
-    GalaxySim.Evolve.evolve!(ps, params)
+    evolve!(ps, params)
 
 
     println("final energy")

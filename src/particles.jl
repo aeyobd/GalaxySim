@@ -23,7 +23,8 @@ Base.@kwdef mutable struct Particle <: AParticle
     Ω::F = 1
 
     # stars::Vector = []
-    neighbors::Vector{AParticle} = []
+    neighbors::Vector{Particle} = []
+    distances::Vector{F} = []
 
     T::F = 0.1
     u::F = 3/2*R_ig/μ*T

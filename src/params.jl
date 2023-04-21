@@ -20,18 +20,14 @@ using TOML
     dt_max::F = 1e7yr
     dt_rel_max::F = 20
     
-    r_plummer::F = 0.2 # grav softening
     theta::F = 0.05 # BH theta
 
-    # density estimation...
     # probably don't need all of these
     eta::F = 2
     h_max::F = 100pc
     h_min::F = 0.1pc
-    rho_min::F = 1e-20m_p
-    rho_max::F = 1e20m_p
+    h_maxiter::Int = 20
     tol::F = 1e-3
-    rho_maxiter::Int = 20
 
 
 

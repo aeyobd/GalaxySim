@@ -60,7 +60,13 @@ function dv_P!(p::Particle, params)
 
     p.dv_P .= zeros(3)
     for q in p.neighbors
-        p.dv_P .+= -q.m .*(p.P/p.ρ^2 .+ q.P/q.ρ^2 .+ Π(p, q, params)) .* ∇W(p, q)
+        if q == p
+            continue
+        end
+        p.dv_P .+= -q.m .* (
+            p.P/p.ρ^2/p.Ω .* ∇W(p, q)
+            .- q.P/q.ρ^2/q.Ω .* ∇W(q, p)
+            .+ Π(p, q, params)) 
     end
     return p.dv_P
 end
@@ -80,7 +86,7 @@ function du_cond!(p::Particle, params)
     for q in p.neighbors
         kq = params.K_cond/q.ρ
         ρ_pq = (p.ρ + q.ρ)/2
-        p.du_cond += - q.m * (kp+kq) * (p.u-q.u) * (q.x-p.x) .* ∇W(p, q) / (
+        p.du_cond += - q.m * (kp+kq) * (p.u-q.u) * (q.x-p.x) ⋅ ∇W(p, q) / (
                                 ρ_pq * dist(p, q)^2 + params.eta_visc^2*p.h^2)
     end
 
@@ -98,19 +104,15 @@ function du_P!(p, params)
         return 0.
     end
 
-    p.du_P = 0.
+    s = 0
 
     for q in p.neighbors
-        p.du_P += -1/2*q.m*(p.P/p.ρ^2 + q.P/q.ρ^2 + Π(p, q, params)) * (q.v-p.v) ⋅ ∇W(p, q)
-        if !isfinite(p.du_P)
-            println("nan duP")
-            println(p)
-            println(q)
-            exit()
+        if q != p
+            s += q.m * (p.v .- q.v) ⋅ normalize(p.x - q.x) * dW(p, q)
         end
     end
 
-
+    p.du_P = p.P/p.Ω/p.ρ^2 * s
     return p.du_P
 end
 
@@ -139,7 +141,7 @@ end
 
 
 """
-Sound speed in the gas of p (in-place)
+Sound speed in the gas of p 
 """
 function c_sound(p)
     if p.T >= 0

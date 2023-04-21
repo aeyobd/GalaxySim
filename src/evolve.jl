@@ -17,6 +17,7 @@ using ..Particles
 using ..Tree
 using ..Constants
 using ..GalFiles
+using ..Gravity
 
 using LinearAlgebra
 using Printf
@@ -38,11 +39,12 @@ function evolve!(ps::Vector{Particle}, params)
         update_particles!(ps, t, params)
 
         # only save once every so many frames
-        print_time(t, params.t_end)
         if i % params.save_skip == 0
             record_particles(files, ps, params)
+            total_energy(ps, e_file, params)
         end
 
+        print_time(t, params.t_end)
         t += get_dt(ps, t, params)
         i += 1
     end
@@ -123,21 +125,16 @@ end
 
 
 function update!(p::Particle, params)
+    p.ρ_gas = p.ρ * p.m_gas/p.m
+
     du_P!(p, params)
     du_cond!(p, params)
     dv_DM!(p, params)
     dv_P!(p, params)
-    # if params.phys_gravity
-    #     p.dv_G = zeros(3)
-    #     dv_G!(p, tree, params)
-    # end
+    dv_G!(p, params)
 
     p.du = p.du_P + p.du_cond
-    advance!(p, params)
-end
 
-
-function advance!(p, params)
     if p.du*p.dt + p.u < 0
         p.du = p.u/p.dt/2
         @debug "energy is near 0"
@@ -145,48 +142,27 @@ function advance!(p, params)
 
     p.u += p.du * p.dt
     p.dv .= p.dv_G .+ p.dv_P 
+
     p.t += p.dt
-
-    # constraints on density evolution
-    if p.ρ + p.dρ * p.dt < params.rho_min
-        p.dρ = (params.rho_min-p.ρ)/p.dt
-        p.ρ = params.rho_min
-        @debug "density hit limit"
-    else
-        p.ρ += p.dρ * p.dt
-    end
-
-    if p.h + p.dh * p.dt < params.h_min
-        p.dh = (params.h_min - p.h)/p.dt
-        p.h = params.h_min
-        @debug "h hit limit"
-    else
-        p.h += p.dh * p.dt
-    end
-
-    p.ρ_gas = p.ρ * p.m_gas/p.m
 
     p.T = temp(p)
     p.P = pressure(p)
     p.c = c_sound(p)
+
 end
 
 
 
 function total_energy(ps, e_file, params)
-    tree = make_tree(ps, params)
+    grav = L_grav(ps)
 
     thermal = 0.
     kinetic = 0.
-    grav = 0.
-    
-
     for p in ps
         thermal += p.u*p.m
         kinetic += 1/2*norm(p.v)^2*p.m
-        # diviede by two since we double count pairs
-        grav += U_G(p, tree, params)/2
     end
+
     tot = thermal + kinetic + grav
 
     @printf e_file "%8.4e, %8.4e, %8.4e, %8.4e\n" thermal kinetic grav tot
@@ -225,8 +201,8 @@ function update_dt!(p::Particle, t, params)
 
     dt = 0.25*min(dt_f, dt_c, dt_g)
 
-    factor = 2^floor(log2(params.max_dt/dt))
-    dt = params.max_dt/factor
+    factor = 2^floor(log2(params.dt_max/dt))
+    dt = params.dt_max/factor
 
     dtn = minimum(q.dt for q in p.neighbors)
     dt = min(dt, params.dt_rel_max * dtn)

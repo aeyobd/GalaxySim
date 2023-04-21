@@ -9,6 +9,7 @@ include("particles.jl")
 include("gal_files.jl")
 include("density.jl")
 include("tree.jl")
+include("gravity.jl")
 include("physics.jl")
 include("evolve.jl")
 
@@ -19,6 +20,7 @@ using .GalFiles
 using .Density
 using .Tree
 using .Physics
+using .Gravity
 using .Evolve
 
 

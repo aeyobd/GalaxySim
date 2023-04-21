@@ -24,11 +24,17 @@ get the nearist parlticles
 function find_neighbors!(ps, params)
     x = [p.x for p in ps]
     tree = BallTree(x)
-    idxs, dists = knn(tree, x, params.NN)
+    idxs, dists = knn(tree, x, params.NN, true)
 
     for i in 1:params.N
-        idx = idxs[i]
+        idx = idxs[i][2:end]
+        if any(idx .> params.N) || any(idx .<= 0)
+            println(ps)
+            print(ps[i])
+            throw(error("neighbor search failed"))
+        end
         ps[i].neighbors = ps[idx]
+        ps[i].distances = dists[i][2:end]
     end
 
     return ps

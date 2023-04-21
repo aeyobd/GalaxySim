@@ -38,7 +38,6 @@ function setup()
         x = r * Init.rand_unit_vector()
         v = 2σ * Init.rand_tangent(x)
         p = Particle(x=x, v=v, m=m, T=T, id=i)
-        p.ρ = ρ_mean
         push!(ps, p)
     end
 
