@@ -40,3 +40,28 @@ Where the first term and second term compare the current value of $\rho$ assumin
 ![](density.png)
 An example solution of the equation.
 
+
+# Dependencies
+This package needs the following dependencies, however, these can all be installed automatically
+with 
+activate . + instantiate
+
+
+- CSV
+- DataFrames
+- ForwardDiff
+- Glob
+- LinearAlgebra
+- Logging
+- NearestNeighbors
+- Plots
+- Printf
+- QuadGK
+- Random
+- Roots
+- StaticArrays
+- StatsPlots
+- TOML
+
+
+

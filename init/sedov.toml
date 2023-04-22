@@ -1,25 +1,22 @@
-################# Simulation Parameters ###############
-
 name = "sedov" # name to save to
-# seed = 127
 
 save_skip = 100  # number of frames to skip when saving
-N = 1000         # number of simulation particles
-t_end = 1e7     # years to integrate for
+N = 1331         # number of simulation particles
+t_end = 1e9     # years to integrate for
 
 adaptive = true
-dt_min = 1e3    # minimum timestep
-dt_max = 1024e3
+dt_min = 1e4    # minimum timestep
+dt_max = 1024e4
 dt_rel_max = 16
 
 
 ################# Physics #########################
 
-phys_gravity = false
-phys_DM = false
-
+phys_visc = true
 phys_pressure = true
 phys_conduction = false
 
+phys_gravity = false
+phys_DM = false
 phys_star_formation = false
 
