@@ -1,3 +1,12 @@
+# disk.jl
+#
+# Created: 19-04-23
+# Author: Daniel Boyea (boyea.2@osu.edu
+#
+# This file runs a mostly 2D disc, 
+# however, I have not investigated how this works
+
+
 using Pkg
 Pkg.activate(".")
 

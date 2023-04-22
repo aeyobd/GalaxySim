@@ -1,3 +1,15 @@
+# constants.jl
+#
+# Created: 23-03-2023
+# Author: Daniel Boyea (boyea.2@osu.edu)
+#
+# This file just exports constants
+# and natural units for convenience
+#
+# All the internals of the code are in 
+# cgs
+
+
 module Constants
 
 export G, R_ig, yr, pc, Msun, m_p, k_B
@@ -8,7 +20,6 @@ export F
 F = Float64
 
 
-# All constants in cgs
 const R_ig = 8.314e7   #erg/K/mol
 const G = 6.67e-8 
 const Msun = 1.989e33  # grams

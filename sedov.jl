@@ -29,7 +29,7 @@ function setup()
         if i==j==k==0
             push!(ps, Particle(x=zeros(3), v=zeros(3), m=M_tot, T=Th, id=0))
         else
-            x = R_max/2L * [i,j,k]
+            x = R_max/2L * ( [i,j,k] .+ 0.3*randn(3))
             v = zeros(3)
             push!(ps, Particle(x=x, v=v, m=m, T=T))
         end

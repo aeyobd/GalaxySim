@@ -25,11 +25,12 @@ using Logging
 
 
 function evolve!(ps::Vector{Particle}, params)
-    # open up files to write to 
+    # opens/creates directory to place files in
+    files = open_files(params)
+
     log_file = open("$(params.name)/log.txt", "w")
     global_logger(SimpleLogger(log_file, Logging.Debug))
 
-    files = open_files(params)
     e_file = open("$(params.name)/energy.dat", "w")
     println(e_file,     "thermal,kinetic,grav,tot")
 
