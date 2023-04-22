@@ -1,5 +1,5 @@
 module Particles
-export Particle, NParticle, AParticle, interpolate
+export Particle
 using StaticArrays
 
 using Printf
@@ -14,7 +14,7 @@ Base.@kwdef mutable struct Particle
 
 
     ρ::F = 1 * m_p
-    h::F = 3 * pc
+    h::F = 1 * pc
     c::F = 0
     μ::F = 1.4
     Ω::F = 1
@@ -23,7 +23,7 @@ Base.@kwdef mutable struct Particle
     neighbors::Vector{Particle} = []
     distances::Vector{F} = []
 
-    T::F = 0.1
+    T::F = 0.
     u::F = 3/2*R_ig/μ*T
     P::F = R_ig/μ * ρ * T
 
@@ -44,10 +44,12 @@ Base.@kwdef mutable struct Particle
     # for tracking each process
     du_P::F = 0
     du_cond::F = 0
+    du_visc::F = 0
 
     dv_P::MVector{3, F} = zeros(3)
     dv_G::MVector{3, F} = zeros(3)
     dv_DM::MVector{3, F} = zeros(3)
+    dv_visc::MVector{3, F} = zeros(3)
 end
 
 

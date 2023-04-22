@@ -53,10 +53,11 @@ using TOML # to read in options from file
 
     # pressure and viscosity
     phys_pressure::Bool = false
+
     phys_visc::Bool = false
-    alpha_visc::F = 1
-    beta_visc::F = 2
-    eta_visc::F = 0.1
+    alpha::F = 1
+    beta::F = 2
+    eps::F = 0.01
 
 
     # thermal conduction

@@ -5,6 +5,7 @@ using GalaxySim
 using LinearAlgebra
 using QuadGK
 import GalaxySim.Constants: R_ig, m_p, G
+
 include("init/init.jl")
 
 # cgs
@@ -29,6 +30,7 @@ function setup()
     println(ρ_mean)
     print("v disp = ")
     println(σ/1e5)
+    println("ρ_c = ", C)
 
     m = M_tot/params.N
 

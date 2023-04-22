@@ -1,3 +1,15 @@
+# two_body_p.jl
+#
+# A test of the pressure forces between two bodies
+#
+# Honeslty, this was a test just to make sure I didn't
+# add a minus sign in the pressure equations. 
+# See the associated plots, the pressure and density smoothly increase,
+# until the particles reach their nearest point, then the particles 
+# move away from eachother.
+# Energy is also successfuly conserved.
+
+
 using Pkg
 
 Pkg.activate(".")

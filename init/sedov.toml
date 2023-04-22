@@ -4,7 +4,7 @@ name = "sedov" # name to save to
 # seed = 127
 
 save_skip = 100  # number of frames to skip when saving
-N = 100         # number of simulation particles
+N = 1000         # number of simulation particles
 t_end = 1e7     # years to integrate for
 
 adaptive = true
@@ -19,7 +19,6 @@ phys_gravity = false
 phys_DM = false
 
 phys_pressure = true
-phys_visc = false
 phys_conduction = false
 
 phys_star_formation = false

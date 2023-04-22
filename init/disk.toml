@@ -11,22 +11,6 @@ save_skip = 25  # number of frames to skip when saving
 N = 300         # number of simulation particles
 t_end = 1e9     # years to integrate for
 
-dt_min = 1e4    # minimum timestep
-dt_max = 1e7
-dt_rel_max = 20
-
-
-theta = 0.05    # BH theta parameter
-eta = 4         # density estimation parameter
-
-# density estimation parameters
-tol = 1e-3
-rho_maxiter = 20
-rho_max = 1e10
-rho_min = 1e-30
-
-r_plummer = 0.2 # Gravitational softening radius, in terms of h
-
 adaptive = true
 
 
@@ -34,31 +18,11 @@ R_virial = 1e3
 c = 10          # density compactness parameters
 
 
-################# Evolutionary Parameters ################
-K_cond = 4e7    # conduction constant
-n_K = 0.05
-sfe = 0.01      # star formation effeciency
-
-Jfuv = 0        # far UV energy density
-Gamma_0 = 0     # stellar feedback factor
-f_rad = 0       # radiative heating fraction
-
-
-
-# viscosity parameters
-alpha_visc = 1
-beta_visc = 2
-eta_visc = 0.1
-
-
-################# Physics #########################
-
 phys_gravity = true
 phys_DM = false
 
 phys_pressure = true
 phys_conduction = true
-phys_visc = false
 
 phys_feedback = false
 phys_star_formation = false

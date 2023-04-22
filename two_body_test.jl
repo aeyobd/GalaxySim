@@ -1,3 +1,18 @@
+# Created 
+#
+#
+# Author: Daniel Boyea (boyea.2@osu.edu)
+#
+# This contains a simple test of the local gravity 
+# Two particles are created which co-orbit the origin
+# The energy is conserved to <1% over 10Gyr, and 
+# the path only deviates slightly.
+# The smoothing length is intentionally set smaller than the 
+# distance to test just the n-body portion. 
+#
+# I have also tested elliptical orbits, which also conserve energy
+
+
 using Pkg
 
 Pkg.activate(".")
@@ -11,7 +26,7 @@ function setup()
 
     r_0 = 10pc
     M_0 = 10Msun
-    v_0 = sqrt(G*M_0/r_0)/4
+    v_0 = sqrt(G*M_0/r_0)/2 # divide by two because of reduced mass
 
     v_vec_1 = [0,1,0] * v_0
     v_vec_2 = [0,-1,0] * v_0

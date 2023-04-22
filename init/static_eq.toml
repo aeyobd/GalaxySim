@@ -20,10 +20,10 @@ adaptive = true
 
 phys_pressure = true
 phys_gravity = true
+phys_visc = true
 
 phys_DM = false
 phys_conduction = false
-phys_visc = false
 phys_feedback = false
 phys_star_formation = false
 

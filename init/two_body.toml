@@ -11,8 +11,8 @@ save_skip = 10
 
 eta = 1         # density estimation parameter
 
-dt_min = 1e3    # minimum timestep
-dt_max = 1024    # minimum timestep
+dt_min = 1e4    
+dt_max = 1024e4   
 
 adaptive=true
 

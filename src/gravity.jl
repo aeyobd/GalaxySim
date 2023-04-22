@@ -1,6 +1,6 @@
 module Gravity
 
-export dv_G!, L_grav
+export dv_G!, L_grav, dv_DM!
 
 
 using ..Constants
@@ -8,6 +8,30 @@ using ..Particles
 using ..Density
 
 
+
+
+"""
+dv_DM!(p::Particle, params::Params) -> Vector{3, F}
+
+Acceleration due to dark matter
+Modifies the dv_DM attribute of the
+particle in-place.
+
+I assume a NFW profile.
+"""
+function dv_DM!(p::Particle, params)
+    if !params.phys_DM
+        return zeros(3)
+    end
+    p.dv_DM .= a_DM(norm(p.x), params) * normalize(p.x)
+    return p.dv_DM
+end
+
+
+
+"""
+Acceleration due to gravity
+"""
 function dv_G!(p::Particle, params)
     p.dv_G .= zeros(3)
     if !params.phys_gravity

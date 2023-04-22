@@ -30,6 +30,7 @@ end
 
 
 
+# this should have been a dictionary :(
 FILE_NAMES = (
     "t",
     "x1", "x2", "x3",
@@ -43,8 +44,11 @@ FILE_NAMES = (
     "P",
     "du_P",
     "du_C",
+    "du_visc",
     "dv_P",
     "dv_G",
+    "dv_visc",
+    "dv_DM",
    )
 
 VAR_NAMES = (p->p.t/yr,
@@ -59,8 +63,11 @@ VAR_NAMES = (p->p.t/yr,
              p->p.P,
              p->p.du_P,
              p->p.du_cond,
+             p->p.du_visc,
              p->norm(p.dv_P),
              p->norm(p.dv_G),
+             p->norm(p.dv_visc),
+             p->norm(p.dv_DM),
             )
 
 function open_files(params)

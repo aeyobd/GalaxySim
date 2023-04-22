@@ -44,6 +44,7 @@ function evolve!(ps::Vector{Particle}, params)
     _, _, _, tot = energy(ps, params)
     println("initial energy: $tot")
 
+
     t = 0
     i = 0 # keep track of the number of frames
     while t < params.t_end
@@ -82,11 +83,14 @@ end
 
 
 
-function update_particles!(ps, t, params)
+"""
+Updates the quantities for all particles
 
+"""
+function update_particles!(ps, t, params)
+    # we only update particles as needed
     update_ps = which_update(ps, t, params)
 
-    # leapfrog integration
     for p in update_ps
         p.t += p.dt
         p.x .+= p.v * p.dt/2
@@ -111,10 +115,12 @@ function update_particles!(ps, t, params)
     end
 
     for p in update_ps
+        # finally update other parameters
         update_dt!(p, t, params)
         update_m_star!(p, params)
     end
 end
+
 
 
 function which_update(ps, t, params)
@@ -139,16 +145,34 @@ end
 
 
 function update!(p::Particle, params)
-    p.ρ_gas = p.ρ * p.m_gas/p.m
+    if params.phys_pressure
+        du_P!(p, params)
+        dv_P!(p, params)
+    end
 
-    du_P!(p, params)
-    du_cond!(p, params)
-    dv_DM!(p, params)
-    dv_P!(p, params)
-    dv_G!(p, params)
+    if params.phys_DM
+        dv_DM!(p, params)
+    end
 
-    p.du = p.du_P + p.du_cond
+    if params.phys_conduction
+        du_cond!(p, params)
+    end
 
+    if params.phys_gravity
+        dv_G!(p, params)
+    end
+
+    if params.phys_visc
+        dv_visc!(p, params)
+        du_visc!(p, params)
+    end
+
+    p.du = p.du_P + p.du_cond + p.du_visc
+    @. p.dv = p.dv_P + p.dv_G + p.dv_DM + p.dv_visc
+
+    # prevent energy from going below zero
+    # This does violate energy conservation, 
+    # but I haven't implemented a better scheme yet
     if p.du*p.dt + p.u < 0
         p.du = p.u/p.dt/2
         @debug "energy is near 0"
@@ -162,11 +186,12 @@ function update!(p::Particle, params)
     p.T = temp(p)
     p.P = pressure(p)
     p.c = c_sound(p)
-
 end
 
 
-
+"""
+calculates the current system energy
+"""
 function energy(ps, params)
     grav = L_grav(ps, params)
 
@@ -186,9 +211,9 @@ end
 
 function save_energy(ps, e_file, params)
     thermal, kinetic, grav, tot = energy(ps, params)
-
     @printf e_file "%8.4e, %8.4e, %8.4e, %8.4e\n" thermal kinetic grav tot
 end
+
 
 
 
@@ -207,18 +232,19 @@ end
 
 
 
+
 function update_dt!(p::Particle, t, params)
     if !params.adaptive
         return p.dt = params.dt_min
     end
     dt_f = p.h/norm(p.dv)
-    dt_c = p.h/p.c/(1+0.6*params.alpha_visc)
+    dt_c = p.h/p.c
 
     dt_g = 1/sqrt(8π*G*p.ρ)
 
     dt = 0.25*min(dt_f, dt_c, dt_g)
 
-    factor = 2^floor(log2(params.dt_max/dt))
+    factor = 2^ceil(log2(params.dt_max/dt))
     dt = params.dt_max/factor
 
     dtn = minimum(q.dt for q in p.neighbors)

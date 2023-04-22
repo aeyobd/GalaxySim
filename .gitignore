@@ -13,3 +13,13 @@ analysis/*
 statprof
 
 log.txt
+
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.run.xml
+*.synctex.gz
+*.log
+*.fls
