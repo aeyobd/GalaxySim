@@ -1,74 +1,70 @@
-using Plots
-using CSV
-using DataFrames
-using ProgressMeter
-# using Printf
-using LinearAlgebra
-using StatsPlots
+# Created 
+#
+#
+# Author: Daniel Boyea (boyea.2@osu.edu)
+#
+# This contains a simple test of the local gravity 
+# Two particles are created which co-orbit the origin
+# The energy is conserved to <1% over 10Gyr, and 
+# the path only deviates slightly.
+# The smoothing length is intentionally set smaller than the 
+# distance to test just the n-body portion. 
+#
+# I have also tested elliptical orbits, which also conserve energy, 
+# which is also an easy modification of the code (just change v)
+#
+# Essentially, gravity performs with minimal errors.
+
+
+using Pkg
+
+Pkg.activate(".")
 
 using GalaxySim
+using LinearAlgebra
 
-fpath = "../two_body/"
-skip = 10
 
-function get_col(col)
-    file = fpath * col * ".dat"
-    df = Array(CSV.read(file, DataFrame, header=false))[1:skip:end, 1:end-1]
-    return df
+function setup()
+    params = Params("init/two_body.toml")
+
+    # initial radii, masses, and velocities
+    r_0 = 10pc
+    M_0 = 10Msun
+    v_0 = sqrt(G*M_0/r_0)/2 # divide by two because of reduced mass
+
+    v_vec_1 = [0,1,0] * v_0
+    v_vec_2 = [0,-1,0] * v_0
+
+    r_vec_1 = [-1,0,0] * r_0
+    r_vec_2 = [1,0,0] * r_0
+
+    p1 = Particle(
+        x = r_vec_1,
+        v = v_vec_1,
+        m = M_0,
+        dt = params.dt_min
+    )
+
+    p2 = Particle(
+        x = r_vec_2,
+        v = v_vec_2,
+        m = M_0,
+        dt = params.dt_min
+    )
+
+    # return a list of the particles
+    ps = [p1, p2]
+    return params, ps
 end
 
-x1s = get_col("x1")
-x2s = get_col("x2")
-x3s = get_col("x3")
-v1s = get_col("v1")
-v2s = get_col("v2")
-v3s = get_col("v3")
+
+function run()
+    params, ps = setup()
+    evolve!(ps, params)
+end
 
 
-ρs = get_col("rho")
-Ts = log10.(get_col("T"))
-ts = get_col("t")
-du_C = get_col("du_C")
-du_P = get_col("du_P")
+run()
 
-dv_P = get_col("dv_P")
-dv_G = get_col("dv_G")
-
-m_star = get_col("mstar")
-
-hs = get_col("h")
-dts = get_col("dt")
-Nn = get_col("N_neighbors")
-
-
-Rs = @. sqrt(x1s^2 + x2s^2 + x3s^2)
-Vs = @. sqrt(v1s^2 + v2s^2 + v3s^2);
-du = du_C .+ du_P
-dv = dv_P .+ dv_G;
-energy = CSV.read("../two_body/energy.dat", DataFrame)[1:skip:end, :];
-energy[!, "t"] = ts[:, 1];
-
-plot(x1s[:, 1], x2s[:, 1])
-plot!(x1s[:, 2], x2s[:, 2])
-
-
-11.429
-
-maximum(x2s[:, 1])*2
-
-plot(v1s[:, 1], v2s[:, 1])
-plot!(v1s[:, 2], v2s[:, 2])
-
-
-length(ts)
-
-energy
-
-@df energy plot(:t, :tot, label="Total")
-@df energy plot!(:t, :grav, label="gravitational")
-@df energy plot!(:t, :kinetic, label="kinetic")
-@df energy plot!(:t, :thermal, label="thermal")
-
-histogram(log10.(dts[end, :]), range=(1, 10), bins=5)
 
 

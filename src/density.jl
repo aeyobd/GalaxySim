@@ -232,7 +232,7 @@ end
 Instead solves for ρ-h by bisection method
 """
 function solve_ρ_bisection!(p, params)
-    @info "newton's method failed, trying bisection"
+    # @info "newton's method failed, trying bisection"
 
     h_l = params.h_min # lower bound
     h_h = params.h_max # upper bound

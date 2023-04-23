@@ -1,3 +1,21 @@
+# density_plot.jl
+#
+# Creates the plot of the density estimation
+#
+# Created 21-04-2023
+# Author Daniel Boyea (boyea.2@osu.edu)
+#
+# As expected, the step size decreases as
+# we approach the zero on f
+#
+# It is also promising that the derivative df
+# is always negative and the function f
+# is monotonically decreasing in this case.
+# Essentially, the method of solving for density
+# is okay.
+
+
+
 using Plots
 using LaTeXStrings
 using CSV
@@ -11,12 +29,12 @@ function make_plot()
     ylabel!(L"$f(h) = \rho - \rho_{\rm new}$")
     ylims!(-1, 1)
     df1 = CSV.File("density.dat")
-    scatter!(df1.h, df1.f)
-    hline!([0])
-    xlims!(0, 40)
-    ylims!(-0.01, 0.01)
+    scatter!(df1.h, df1.f, label="calculated root")
+    hline!([0], label=L"$f(h)=0$")
+    xlims!(20, 60)
+    ylims!(-0.0005, 0.0005)
 
-    savefig("density.png")
+    savefig("density.pdf")
 end
 
 

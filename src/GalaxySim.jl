@@ -1,3 +1,12 @@
+# GalaxySim.jl
+#
+# This file simply exports all the other files
+#
+# Creatd 15-03-2023
+# Revised to add other files
+# Author Daniel Boyea (boyea.2@osu.edu)
+
+
 module GalaxySim
 
 export yr, pc, Msun, G, m_p

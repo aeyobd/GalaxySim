@@ -2,6 +2,9 @@
 #
 # A test of the pressure forces between two bodies
 #
+# Created 19-04-2023
+# Author Daniel Boyea (boyea.2@osu.edu)
+#
 # Honeslty, this was a test just to make sure I didn't
 # add a minus sign in the pressure equations. 
 # See the associated plots, the pressure and density smoothly increase,
@@ -21,6 +24,8 @@ using LinearAlgebra
 function setup()
     params = Params("init/two_body_p.toml")
 
+    # create two particles 
+    # with a head on collision
     r_0 = 10pc
     M_0 = 10Msun
     v_0 = 3*sqrt(G*M_0/r_0)
@@ -52,12 +57,7 @@ end
 
 function run()
     params, ps = setup()
-    println(ps)
-
     GalaxySim.Evolve.evolve!(ps, params)
-
-    println(ps)
-    println("finished")
 end
 
 

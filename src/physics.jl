@@ -1,3 +1,12 @@
+# physics
+#
+# contains all other hydrodynamic/star formation physics
+#
+# Created 03-22-2023
+# Author Daniel Boyea (boyea.2@osu.edu)
+
+
+
 module Physics
 
 export dm_star!
@@ -70,7 +79,9 @@ function du_cond!(p::Particle, params)
     return p.du_cond
 end
 
-
+"""
+Change in energy due to pressure
+"""
 function du_P!(p, params)
     s = 0
 
@@ -114,7 +125,9 @@ function dm_star!(p::Particle, params)
 end
 
 
-
+"""
+The viscosity strength helper function
+"""
 function Π(p::Particle, q::Particle, params)
     if !params.phys_visc
         return 0
@@ -134,6 +147,9 @@ function Π(p::Particle, q::Particle, params)
 end
 
 
+"""
+change in energy due to viscosity
+"""
 function du_visc!(p::Particle, params)
     if !params.phys_visc
         return 0.

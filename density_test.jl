@@ -1,6 +1,6 @@
 # density_test.jl 
 #
-# initial_version
+# initial_version 
 # author: Daniel Boyea (boyea.2@osu.edu)
 #
 # This file tests if the density estimator is good
@@ -10,6 +10,14 @@
 #
 # The script writes the data to `density.dat` 
 # and `density_f.dat`, each of which are csv files
+#
+# There is an error ~10% or so in the density estimation,
+# part of this is due to the limited precision by which
+# I solve for ρ, and otherwise there is local variation in
+# density and so there is just an inherent challenge in turning
+# point particals into smoothly varying density.
+#
+# The plot looks as expected !
 
 using Pkg
 Pkg.activate(".")
@@ -18,6 +26,7 @@ using GalaxySim
 using LinearAlgebra
 using QuadGK
 using Random
+
 
 import GalaxySim.Constants: m_p # proton mass
 include("init/init.jl")
@@ -41,12 +50,11 @@ function setup()
     for i in 1:params.N
         if i == 1 # let the first particle be at the origin
             x = zeros(3) 
-            v = zeros(3)
         else # make a random particle in the box (-R_max, R_max)^3
             x = R_max*(2*randn(3) .- 1)
-            v = 2σ * Init.rand_tangent(x)
         end
-        p = Particle(x=x, v=v, m=m, T=T, id=i)
+        v = zeros(3)
+        p = Particle(x=x, v=v, m=m, id=i)
         push!(ps, p)
     end
 
@@ -62,6 +70,9 @@ function run()
     for p in ps # other particles help calculate the current particles density
         GalaxySim.Density.solve_ρ!(p, params)
     end
+
+    # offset the h so we can see it work
+    ps[1].h = 30pc
     GalaxySim.Density.solve_ρ!(ps[1], params, save=true)
 
     print("ρ = ")

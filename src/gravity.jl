@@ -1,3 +1,13 @@
+# Gravity
+#
+# methods to calculate gravitational force
+#
+# Created 11-04-2023
+# Updated to use SPH consistant gravity 20-04-2023
+#
+# Author Daniel Boyea (boyea.2@osu.edu)
+
+
 module Gravity
 
 export dv_G!, L_grav, dv_DM!
@@ -31,15 +41,14 @@ end
 
 """
 Acceleration due to gravity
+This is calculated following 
+Price and Monaghan 2007.
 """
 function dv_G!(p::Particle, params)
     p.dv_G .= zeros(3)
-    if !params.phys_gravity
-        return p.dv_G
-    end
 
     for (q, d) in zip(p.neighbors, p.distances)
-        if q == p
+        if q == p # skip over self
             continue
         end
         p.dv_G .+= -G*q.m*(dϕ(d, q.h) + dϕ(d, p.h))/2 * (p.x-q.x)/d
@@ -50,6 +59,9 @@ end
 
 
 
+"""
+Helper function to calculate gravity
+"""
 function ζ(p::Particle)
     s = 0
     for (q, d) in zip(p.neighbors, p.distances)
@@ -63,7 +75,7 @@ end
 
 
 """
-Local potential, negative
+Local softened gravitational potential (negative)
 """
 function ϕ(r::F, h)
     q = r/h
@@ -81,7 +93,7 @@ end
 
 
 """
-Equal to ϕ'(r, h), >0
+Equal to ϕ'(r, h), positive, gravitational force kernel
 """
 function dϕ(r::F, h)
     q = r/h
@@ -98,7 +110,9 @@ end
 
 
 
-# >0
+"""
+derivative of ϕ with respect to h
+"""
 function dϕ_dh(r::F, h)
     q = r/h
     if 0 ≤ q < 1
@@ -115,10 +129,16 @@ end
 
 ϕ(p::Particle, q::Particle) = ϕ(dist(p, q), p.h)
 
+"""
+Pairwise gravitational potential (halved)
+"""
 function L_grav(p::Particle, q::Particle)
     return G/2 * p.m * q.m * (ϕ(p, q) + ϕ(q, p))/2
 end
 
+"""
+Gravitational potential of particles ps
+"""
 function L_grav(ps, params)
     if !params.phys_gravity
         return 0.

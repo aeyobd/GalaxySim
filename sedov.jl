@@ -1,5 +1,16 @@
-# This scripts lets us run a 
+# sedov.jl
 #
+# This runs a sedov-taylor-von-newman blast wave
+#
+# Created 18-04-2023
+# Author Daniel Boyea (boyea.2@osu.edu)
+#
+# Unfortunantly, this doesn't work well with the simulation as is
+# so there is some incorrect physics in the viscosity prescriptions
+# or I am not running this at high enough resolution
+#
+# The particles start off in a mostly regular grid, and the center
+# particle is set at a high temperature.
 
 using Pkg
 Pkg.activate(".")
@@ -24,7 +35,9 @@ function setup()
 
     ps = Particle[]
 
-    L = 5 # needs to be consistant with N
+    # create a grid of particles this time
+    # but add a little scatter as well
+    L = 5 
     for i in -L:L, j in -L:L, k in -L:L
         if i==j==k==0
             push!(ps, Particle(x=zeros(3), v=zeros(3), m=M_tot, T=Th, id=0))

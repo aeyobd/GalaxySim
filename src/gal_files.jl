@@ -1,3 +1,10 @@
+# gal_files.jl
+#
+# Methods to output results
+#
+# Created 17-04-2023
+# Author Daniel Boyea
+
 module GalFiles
 
 export print_time
@@ -10,7 +17,8 @@ using LinearAlgebra
 using ..Constants
 
 
-
+# Function to nicely print the time 
+# in human readable format
 function print_time(t, t_end)
     if t < 1e3*yr
         s = @sprintf("%4.0f yr", t/yr)
@@ -31,6 +39,7 @@ end
 
 
 # this should have been a dictionary :(
+# File names to store data in
 FILE_NAMES = (
     "t",
     "x1", "x2", "x3",
@@ -70,6 +79,9 @@ VAR_NAMES = (p->p.t/yr,
              p->norm(p.dv_DM),
             )
 
+"""
+Creates and opens the files to write the simulation output to
+"""
 function open_files(params)
     mkpath(params.name)
 
@@ -83,6 +95,7 @@ function open_files(params)
     for basename in FILE_NAMES
         fname = "$(params.name)/$(basename).dat"
         file = open(fname, "w")
+        println(file, "# the $(basename) values for each particle (row) over time (col)")
         push!(files, file)
     end
 
@@ -92,8 +105,9 @@ function open_files(params)
 end
 
 
-
-
+"""
+Records the current values to files
+"""
 function record_particles(files, particles, params)
     for (file, var) in zip(files, VAR_NAMES)
         for p in particles
@@ -111,5 +125,6 @@ end
 function close_files(files)
     close.(files)
 end
+
 
 end
