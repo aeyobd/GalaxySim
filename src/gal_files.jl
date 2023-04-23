@@ -9,12 +9,15 @@ module GalFiles
 
 export print_time
 export open_files, record_particles, close_files
+export energy
 
 using Printf
 using Glob
 using LinearAlgebra
+using Logging
 
 using ..Constants
+using ..Gravity
 
 
 # Function to nicely print the time 
@@ -33,51 +36,37 @@ function print_time(t, t_end)
     p = t/t_end*100
     sp = @sprintf("%2.2f %% complete", p)
 
-    print("t =\t" * s * ", " * sp * "\r")
+    print("t =\t$s, $sp\r")
 end
 
 
 
 # this should have been a dictionary :(
 # File names to store data in
-FILE_NAMES = (
-    "t",
-    "x1", "x2", "x3",
-    "v1", "v2", "v3",
-    "rho",
-    "h",
-    "T",
-    "mstar",
-    "N_neighbors",
-    "dt",
-    "P",
-    "du_P",
-    "du_C",
-    "du_visc",
-    "dv_P",
-    "dv_G",
-    "dv_visc",
-    "dv_DM",
-   )
+FILE_NAMES = [
+    ("t", p->p.t/yr,"# the particle time in years"),
+    ("x1", p->p.x[1]/pc, "# The particle position x1 in pc"),
+    ("x2",  p->p.x[2]/pc, "# The particle position x2 in pc"),
+    ("x3", p->p.x[3]/pc,"# The particle position x3 in pc"),
+    ("v1",  p->p.v[1]/1e5, "# The particle velocity v1 in km/s"),
+    ("v2",  p->p.v[2]/1e5, "# The particle velocity v2 in km/s"),
+    ("v3", p->p.v[3]/1e5,    "# The particle velocity v3 in km/s"),
+    ("rho", p->p.ρ/m_p,"# density in cm^-3"),
+    ("h", p->p.h/pc,"# smoothing length in pc"),
+    ("T", p->p.T,"# temperatures in K"),
+    ("mstar", p->p.m_star/Msun,"# mass of star formation"),
+    ("N_neighbors", p->length(p.neighbors),"# number of neighbors"),
+    ("dt", p->p.dt/yr,"# particle timesteps in years"),
+    ("P", p->p.P,"# particle pressure in erg/cm"),
+    ("du_P", p->p.du_P, "# change in energy due to pressure in ergs"),
+    ("du_C", p->p.du_cond, "# change in energy due to conduction"),
+    ("du_visc", p->p.du_visc,"# change in energy due to dissipation"),
+    ("dv_P", p->norm(p.dv_P),"# acceleration due to pressure"),
+    ("dv_G", p->norm(p.dv_G),"# acceleration due to gravity"),
+    ("dv_visc", p->norm(p.dv_visc),"# acceleration due to viscosity "),
+    ("dv_DM", p->norm(p.dv_DM),"# acceleration due to dark matter (cm/s^2)"),
+   ]
 
-VAR_NAMES = (p->p.t/yr,
-             p->p.x[1]/pc, p->p.x[2]/pc, p->p.x[3]/pc,
-             p->p.v[1]/1e5, p->p.v[2]/1e5, p->p.v[3]/1e5,    
-             p->p.ρ/m_p,
-             p->p.h/pc,
-             p->p.T,
-             p->p.m_star/Msun,
-             p->length(p.neighbors),
-             p->p.dt/yr,
-             p->p.P,
-             p->p.du_P,
-             p->p.du_cond,
-             p->p.du_visc,
-             p->norm(p.dv_P),
-             p->norm(p.dv_G),
-             p->norm(p.dv_visc),
-             p->norm(p.dv_DM),
-            )
 
 """
 Creates and opens the files to write the simulation output to
@@ -85,23 +74,30 @@ Creates and opens the files to write the simulation output to
 function open_files(params)
     mkpath(params.name)
 
-    # delete files
+    # delete old
     for file in glob("$(params.name)/*.dat")
         rm(file)
     end
 
-    files = Vector()
+    log_file = open("$(params.name)/log.txt", "w")
+    global_logger(SimpleLogger(log_file, Logging.Debug))
 
-    for basename in FILE_NAMES
+    e_file = open("$(params.name)/energy.dat", "w")
+    println(e_file,     "thermal,kinetic,grav,tot")
+
+    var_files = Vector()
+
+    for (basename, _, header) in FILE_NAMES
         fname = "$(params.name)/$(basename).dat"
         file = open(fname, "w")
-        println(file, "# the $(basename) values for each particle (row) over time (col)")
-        push!(files, file)
+        println(file, header)
+        println(file, "# each row is a timestep and each column is a particle")
+        push!(var_files, file)
     end
 
     println("Opened files")
 
-    return files
+    return var_files, e_file, log_file
 end
 
 
@@ -109,22 +105,63 @@ end
 Records the current values to files
 """
 function record_particles(files, particles, params)
-    for (file, var) in zip(files, VAR_NAMES)
+    var_files, e_file, log_file = files
+
+    for (file, names) in zip(var_files, FILE_NAMES)
+        var = names[2]
+
         for p in particles
             val = var(p)
-            print(file, "$val,")
+            @printf file "%12.8e    " val
         end
 
         println(file)
     end
 
+    save_energy(particles, e_file, params)
 end
 
 
-
+"""
+Closes the simulation files
+"""
 function close_files(files)
-    close.(files)
+    var_files, e_file, log_file = files
+    close.(var_files)
+    close(e_file)
+    close(log_file)
 end
+
+
+
+"""
+calculates the current system thermal, kinetic, gravitational, and total energy
+"""
+function energy(ps, params)
+    grav = L_grav(ps, params)
+
+    thermal = 0.
+    kinetic = 0.
+    for p in ps
+        thermal += p.u*p.m
+        kinetic += 1/2*norm(p.v)^2*p.m 
+    end
+
+    tot = thermal + kinetic + grav
+
+    return thermal, kinetic, grav, tot
+end
+
+
+
+"""
+Saves the energy value to a file
+"""
+function save_energy(ps, e_file, params)
+    thermal, kinetic, grav, tot = energy(ps, params)
+    @printf e_file "%8.4e, %8.4e, %8.4e, %8.4e\n" thermal kinetic grav tot
+end
+
 
 
 end

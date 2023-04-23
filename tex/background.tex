@@ -69,9 +69,16 @@ The main body of the code is in the \texttt{src/} directory. This directory incl
 
 
 \section{Physics}
+Lagrangian derivative
+\begin{equation}
+    \frac{d}{dt} = \frac{\partial }{\partial t} - \vec{v} \cdot \nabla 
+\end{equation}
+
 The hydrodynamic equations using lagrangian derivatives are
 \begin{align}
-    \nabla \rho = ?
+    \mathbf{a} &= \frac{-1}{\rho} \nabla \cdot \mathbf{P} \\
+    u &= \frac{3}{2} \frac{R}{\mu} T
+    \frac{d u}{d t} = 
 \end{align}
 
 Smoothed Particle Hydrodynamics (SPH) is a varient of the Lagrangian method for solving
@@ -83,6 +90,15 @@ First, we need a way to estimate the density at any given point from the distrib
 \end{equation}
 where the sum index $i$ is over all points and $W(r, h)$ is the kernel weight at a distance $r$ with a smoothing length $h$. 
 
+\subsection{Hydrodynamics}
+
+\subsection{Viscosity}
+
+
+\subsection{Gravity}
+
+
+\subsection{Star Formation and Feedback}
 
 \section{Implementation}
 I follow a variety of sources to use standard smoothed particle hydrodynamics (SPH) to implement the physics \citep{monaghan92,monaghan05,PM07,phantom,dwarf,price12,gadget}.
@@ -104,6 +120,10 @@ So each new $h$ is found with
 
 
 Other physics (like the change in density, position, etc.) are the standard SPH equations \citep{monaghan05, monaghan92}, except gravity is done following SPH using a smoothed kernel as described in \citet{PM07}.
+
+\begin{align}
+\frac{du}{dt} \Bigg\vert_{P} = \frac{P_j}{\Omega_j\rho_j^2} \sum_i m_i (\mathbf{v}_j - \mathbf{v}_i) \cdot \nabla_j W_ij
+\end{align}
 
 Integration is leapfrog, so 
 \begin{itemize}

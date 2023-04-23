@@ -15,19 +15,19 @@ export Particle, Params, evolve!
 include("constants.jl")
 include("params.jl")
 include("particles.jl")
-include("gal_files.jl")
 include("density.jl")
 include("gravity.jl")
+include("gal_files.jl")
 include("physics.jl")
 include("evolve.jl")
 
 
 using .Constants
 using .Particles
-using .GalFiles
 using .Density
-using .Physics
 using .Gravity
+using .GalFiles
+using .Physics
 using .Evolve
 
 

@@ -42,16 +42,27 @@ Evolves the given vector of particles
 with the given params until `params.t_end`
 """
 function evolve!(ps::Vector{Particle}, params)
-    # opens/creates directory to place files in
     files = open_files(params)
-    # dump logging into a log file
-    log_file = open("$(params.name)/log.txt", "w")
-    global_logger(SimpleLogger(log_file, Logging.Debug))
-    e_file = open("$(params.name)/energy.dat", "w")
-    println(e_file,     "thermal,kinetic,grav,tot")
+    setup!(ps, params)
 
-    # set up the density, temperature and pressure
-    # as we need those for later
+    _, _, _, tot = energy(ps, params)
+    println("initial energy: $tot") # print out initial energy
+
+
+    try
+        main_loop!(ps, files, params)
+    finally
+        close_files(files)
+
+        # does the energy agree
+        _, _, _, tot = energy(ps, params)
+        println("final energy: $tot")
+    end
+end
+
+
+function setup!(ps, params)
+    # calculate initial density temp and pressure for each particle
     find_neighbors!(ps, params)
     for p in ps
         solve_ρ!(p, params)
@@ -59,38 +70,26 @@ function evolve!(ps::Vector{Particle}, params)
         p.P = pressure(p)
         p.c = c_sound(p)
     end
-
-    # energy is a great validation metric
-    _, _, _, tot = energy(ps, params)
-    println("initial energy: $tot")
+end
 
 
+
+function main_loop!(ps, files, params)
     t = 0
-    i = 0 # keep track of the number of frames
+    i = 0 # keep track of the number of loops
     while t < params.t_end
         # timestep the particles
         update_particles!(ps, t, params)
-
-        # only save once every so many frames
-        if i % params.save_skip == 0
+        
+        if i % params.save_skip == 0 # only save once every so many frames
             record_particles(files, ps, params)
-            save_energy(ps, e_file, params)
         end
 
         print_time(t, params.t_end)
         t += get_dt(ps, t, params)
         i += 1
     end
-
-    # does the energy agree
-    _, _, _, tot = energy(ps, params)
-    println("final energy: $tot")
-
-    close_files(files)
-    close(e_file)
-    close(log_file)
 end
-
 
 
 function get_dt(ps, t, params)
@@ -108,18 +107,13 @@ end
 """
 Updates the quantities for all particles
 
+Uses leapfrog integration.
+
 """
 function update_particles!(ps, t, params)
-    # we only update particles as needed
-    update_ps = which_update(ps, t, params)
+    update_ps = which_update(ps, t, params) # we only update particles as needed
 
-    # leapfrom integration,
-    # only update x and v halfway,
-    # then calculate acceleration,
-    # then update x and v the next half
-    # timestep
     for p in update_ps
-        p.t += p.dt
         p.x .+= p.v * p.dt/2
     end
 
@@ -127,7 +121,6 @@ function update_particles!(ps, t, params)
     for p in update_ps
         p.v .+= p.dv * p.dt/2
     end
-
 
     # recalculate ρ to find acceleration
     find_neighbors!(ps, params)
@@ -144,6 +137,7 @@ function update_particles!(ps, t, params)
 
     for p in update_ps
         # finally update other parameters
+        p.t += p.dt
         update_dt!(p, t, params)
         update_m_star!(p, params)
     end
@@ -225,33 +219,6 @@ function update!(p::Particle, params)
 end
 
 
-"""
-calculates the current system thermal, kinetic, gravitational, and total energy
-"""
-function energy(ps, params)
-    grav = L_grav(ps, params)
-
-    thermal = 0.
-    kinetic = 0.
-    for p in ps
-        thermal += p.u*p.m
-        kinetic += 1/2*norm(p.v)^2*p.m 
-    end
-
-    tot = thermal + kinetic + grav
-
-    return thermal, kinetic, grav, tot
-end
-
-
-
-"""
-Saves the energy value to a file
-"""
-function save_energy(ps, e_file, params)
-    thermal, kinetic, grav, tot = energy(ps, params)
-    @printf e_file "%8.4e, %8.4e, %8.4e, %8.4e\n" thermal kinetic grav tot
-end
 
 
 

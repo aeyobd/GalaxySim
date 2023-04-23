@@ -24,11 +24,11 @@ using .Init
 function setup()
     params = Params("init/sedov.toml")
 
-    T = 0
+    T = 1e-4
     Th = 10^4
 
-    R_max = 5*pc
-    M_tot = 10Msun
+    R_max = 2*pc
+    M_tot = 1Msun
     m = M_tot/(params.N)
 
     ρ_mean = M_tot/R_max^3 / m_p

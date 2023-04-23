@@ -79,6 +79,8 @@ function du_cond!(p::Particle, params)
     return p.du_cond
 end
 
+
+
 """
 Change in energy due to pressure
 """
@@ -125,23 +127,38 @@ function dm_star!(p::Particle, params)
 end
 
 
+
 """
-The viscosity strength helper function
+Signal speed between two particles
 """
-function Π(p::Particle, q::Particle, params)
+function v_sig(p::Particle, q::Particle, params)
     if !params.phys_visc
         return 0
     end
 
-    v_r = (q.v .- p.v) ⋅ (q.x .- p.x)
-    if v_r < 0
-        c_pq = (p.c + q.c)/2
-        ρ_pq = (p.ρ + q.ρ)/2
-        h_pq = (p.h + q.h)/2
-        μ_pq = h_pq*v_r / (dist(p, q)^2 + params.eps*h_pq^2)
+    v_r = (q.v .- p.v) ⋅ normalize(q.x .- p.x)
 
-        return (-params.alpha*c_pq * μ_pq + params.beta*μ_pq^2) / ρ_pq
-    else
+    if v_r <= 0
+        return 1/2 * (p.c + q.c - params.beta*v_r)
+    else # the particles are moving away from eachother
+        return 0.
+    end
+end
+
+
+"""
+Energy signal speed between two particles
+"""
+function v_sig_u(p::Particle, q::Particle, params)
+    if !params.phys_visc
+        return 0
+    end
+
+    v_r = (q.v .- p.v) ⋅ normalize(q.x .- p.x)
+
+    if v_r <= 0
+        return sqrt(2*abs(p.P - q.P)/(p.ρ + q.ρ))
+    else # the particles are moving away from eachother
         return 0.
     end
 end
@@ -157,11 +174,16 @@ function du_visc!(p::Particle, params)
     p.du_visc = 0.
 
     for q in p.neighbors
-        p.du_visc += 1/2*q.m*Π(p, q, params) * (q.v .- p.v) ⋅ ∇W(p, q)
+        ρ_pq = (p.ρ + q.ρ)/2
+        p.du_visc += q.m/ρ_pq*(
+            1/2*params.alpha*v_sig(p, q, params)^2 
+            + params.alpha*v_sig_u(p, q, params) * (p.u - q.u)
+           ) * (dW(p, q) + dW(q, p))/2
     end
 
     return p.du_visc
 end
+
 
 """
 Acceleration due to viscosity
@@ -169,9 +191,9 @@ Acceleration due to viscosity
 function dv_visc!(p::Particle, params)
     p.dv_visc .= zeros(3)
     for q in p.neighbors
-        p.dv_visc .+= -q.m .* (
-            .- Π(p, q, params) .* ∇W(p, q)
-           ) 
+        ρ_pq = (p.ρ + q.ρ)/2
+        vr = (p.v - q.v) ⋅ normalize(p.x - q.x)
+        p.dv_visc .+= -q.m/ρ_pq * v_sig(p, q, params) .* vr .* ( ∇W(p, q)  .- ∇W(q, p) )
     end
     return p.dv_visc
 end
