@@ -22,13 +22,15 @@ using CSV
 
 
 function make_plot()
-    df = CSV.File("density_f.dat")
+    df = CSV.File("density_f.dat", delim=' ', ignorerepeated=true, comment="#",
+                  header = ["h", "f", "df"])
     plot(df.h, df.f, label="f")
     plot!(df.h, df.df, label="df")
     xlabel!(L"$h$ (pc)")
     ylabel!(L"$f(h) = \rho - \rho_{\rm new}$")
     ylims!(-1, 1)
-    df1 = CSV.File("density.dat")
+    df1 = CSV.File("density.dat", delim=' ', ignorerepeated=true, comment="#",
+                  header = ["h", "rho", "Omega", "f"])
     scatter!(df1.h, df1.f, label="calculated root")
     hline!([0], label=L"$f(h)=0$")
     xlims!(20, 60)

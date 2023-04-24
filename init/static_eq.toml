@@ -8,8 +8,8 @@ name = "static_eq" # name to save to
 # seed = 127
 save_skip = 25  # number of frames to skip when saving
 
-N = 500         # number of simulation particles
-NN = 50
+N = 300         # number of simulation particles
+NN = 100
 t_end = 1e8     # years to integrate for
 
 dt_max = 1024e4
@@ -21,9 +21,9 @@ adaptive = true
 phys_pressure = true
 phys_gravity = true
 phys_visc = true
+phys_conduction = true
 
 phys_DM = false
-phys_conduction = false
 phys_feedback = false
 phys_star_formation = false
 

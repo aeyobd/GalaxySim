@@ -69,17 +69,11 @@ The main body of the code is in the \texttt{src/} directory. This directory incl
 
 
 \section{Physics}
-Lagrangian derivative
+All physics are calculated in the reference frames of the particles, so we use
+Lagrangian derivatives, i.e.
 \begin{equation}
-    \frac{d}{dt} = \frac{\partial }{\partial t} - \vec{v} \cdot \nabla 
+    \frac{d}{dt} = \frac{\partial }{\partial t} - \vec{v} \cdot \nabla .
 \end{equation}
-
-The hydrodynamic equations using lagrangian derivatives are
-\begin{align}
-    \mathbf{a} &= \frac{-1}{\rho} \nabla \cdot \mathbf{P} \\
-    u &= \frac{3}{2} \frac{R}{\mu} T
-    \frac{d u}{d t} = 
-\end{align}
 
 Smoothed Particle Hydrodynamics (SPH) is a varient of the Lagrangian method for solving
 hydrodynamics equations. Instead of dividing space up into a grid, each particle is followed and the physical properties are calculated in the frame of each particle.
@@ -92,13 +86,35 @@ where the sum index $i$ is over all points and $W(r, h)$ is the kernel weight at
 
 \subsection{Hydrodynamics}
 
-\subsection{Viscosity}
+The basic hydrodynamic equations in terms of velocity $\mathbf{v}$, pressure $P$ , and density $\rho$ are
+\begin{align}
+    \frac{d\mathbf{v}}{dt}&= \frac{-1}{\rho} \nabla \cdot \mathbf{P} \\
+    \frac{d u}{d t} &= -\frac{P}{\rho} \nabla \cdot \mathbf{v}\\
+    u &= \frac{3}{2} \frac{R}{\mu} T\\
+    P &= \rho \frac{R}{\mu} T 
+\end{align}
+where we assume an ideal gas equation of state, $R$ is the ideal gas constant, $T$ is the temperature, and $\mu$ is the mean molecular mass.
+
 
 
 \subsection{Gravity}
 
+If we use a simple $1/r^2$ gravitational law, then the gravitational force will diverge if
+two particles become to close. As each particle doen't represent a point mass but
+a sample of a continuous distribution, it makes more sense to use a softened gravitational 
+force, 
+\begin{equation}
+    {\bf F}(\mathbf{r}) = - G \frac{m_i m_j \mathbf{r}}{(r^2 + h^2)^{3/2}}.
+\end{equation}
+From this definition, we can find a kernel which reduces to a $1/r^2$ outside the smoothing
+length $2h$ but softenes as $r\to0$. The resulting set of equations to describe gravity are \citep{PM07}
 
-\subsection{Star Formation and Feedback}
+\begin{align}
+    \frac{d v_{\rm grav}}{dt} &= -\sum_q m_q \frac{\phi'(h_p) + \phi'(h_q)}{2}{\bf \hat{r}}
+    - \sum_q\frac{m_q}{2} \left( \frac{\zeta_p}{\Omega_p} \nabla_p W - \frac{\zeta_q}{\Omega_q} \nabla_q W \right)
+\end{align}
+
+
 
 \section{Implementation}
 I follow a variety of sources to use standard smoothed particle hydrodynamics (SPH) to implement the physics \citep{monaghan92,monaghan05,PM07,phantom,dwarf,price12,gadget}.
@@ -124,6 +140,28 @@ Other physics (like the change in density, position, etc.) are the standard SPH 
 \begin{align}
 \frac{du}{dt} \Bigg\vert_{P} = \frac{P_j}{\Omega_j\rho_j^2} \sum_i m_i (\mathbf{v}_j - \mathbf{v}_i) \cdot \nabla_j W_ij
 \end{align}
+
+
+I use a cubic spline kernel, which has the form
+\begin{equation}
+    w(q) = \frac{1}{\pi}
+    \begin{cases}
+        1-\frac{3}{2} q^2 + \frac{3}{4} q^3, &  0 \leq q < 1 \\
+        \frac{1}{4} (2-q)^3, &  0 \leq q < 1 \\
+        0. & q \geq 2
+    \end{cases}
+\end{equation}
+where the general weighting function is $W(r, h) = q(r/h)$. This yields a gravitational force kernel of 
+\begin{equation}
+    \phi(q) = \frac{1}{\pi}
+    \begin{cases}
+        1/h (\frac{2}{3}q^2 - \frac{3}{10}q^4 + \frac{1}{10}q^5 - \frac{7}{5} ) & 0 \leq q < 1 \\
+        1/h (\frac{4}{3}q^2 - q^3 + \frac{3}{10}q^4 - \frac{1}{30}q^5 - \frac{8}{5}  + \frac{1}{15q}) & 0 \leq q < 1 \\
+        -1/r & q \geq 2
+    \end{cases}.
+\end{equation}
+where once again $q=r/h$. 
+
 
 Integration is leapfrog, so 
 \begin{itemize}

@@ -1,12 +1,12 @@
 name = "sedov" # name to save to
 
 save_skip = 100  # number of frames to skip when saving
-N = 1331         # number of simulation particles
-t_end = 1e9     # years to integrate for
+N = 343         # number of simulation particles
+t_end = 1e7     # years to integrate for
 
 adaptive = true
-dt_min = 1e4    # minimum timestep
-dt_max = 1024e4
+dt_min = 1e2    # minimum timestep
+dt_max = 1024e2
 dt_rel_max = 16
 
 

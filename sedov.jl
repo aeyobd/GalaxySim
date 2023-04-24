@@ -37,7 +37,7 @@ function setup()
 
     # create a grid of particles this time
     # but add a little scatter as well
-    L = 5 
+    L = 3 
     for i in -L:L, j in -L:L, k in -L:L
         if i==j==k==0
             push!(ps, Particle(x=zeros(3), v=zeros(3), m=M_tot, T=Th, id=0))

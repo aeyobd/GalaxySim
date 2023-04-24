@@ -43,16 +43,16 @@ function setup()
     ρ(r) = C / r^2 # this is the analytic solution
     M(r) = 4*π * C * r
 
-    R_max = 200pc
+    R_max = 400pc
     M_tot = M(R_max)
-    print("total mass = ")
+    print("total mass (M_☉ = ")
     println(M_tot/Msun)
-    print("mean density = ")
+    print("mean density (1/cm^3) = ")
     ρ_mean = M_tot/R_max^3 / m_p
     println(ρ_mean)
-    print("v disp = ")
+    print("v disp (km/s) = ")
     println(σ/1e5)
-    println("ρ_c = ", C)
+    println("ρ_c (1/cm^3 at 1pc) = ", C/pc^2/m_p)
 
     m = M_tot/params.N
 

@@ -37,32 +37,27 @@ using Logging
 
 
 """
-The main evolution loop.
 Evolves the given vector of particles
 with the given params until `params.t_end`
 """
 function evolve!(ps::Vector{Particle}, params)
     files = open_files(params)
     setup!(ps, params)
-
-    _, _, _, tot = energy(ps, params)
-    println("initial energy: $tot") # print out initial energy
-
+    println("initial energy: ", energy(ps, params)[end])
+    println()
 
     try
         main_loop!(ps, files, params)
     finally
         close_files(files)
-
-        # does the energy agree
-        _, _, _, tot = energy(ps, params)
-        println("final energy: $tot")
+        println()
+        println("final energy: ", energy(ps, params)[end])
     end
 end
 
 
+""" calculate initial density temp and pressure for each particle"""
 function setup!(ps, params)
-    # calculate initial density temp and pressure for each particle
     find_neighbors!(ps, params)
     for p in ps
         solve_ρ!(p, params)
@@ -73,7 +68,7 @@ function setup!(ps, params)
 end
 
 
-
+"""Main loop which updates particles"""
 function main_loop!(ps, files, params)
     t = 0
     i = 0 # keep track of the number of loops
@@ -82,7 +77,7 @@ function main_loop!(ps, files, params)
         update_particles!(ps, t, params)
         
         if i % params.save_skip == 0 # only save once every so many frames
-            record_particles(files, ps, params)
+            record_particles(files, ps, t, params)
         end
 
         print_time(t, params.t_end)
@@ -92,6 +87,8 @@ function main_loop!(ps, files, params)
 end
 
 
+
+""" Determines the next simulation timestep """
 function get_dt(ps, t, params)
     if !params.adaptive
         return params.dt_min
@@ -223,10 +220,11 @@ end
 
 
 
-"""
-Updates the star formation mass of particle p
-"""
+""" Updates the star formation mass of particle p """
 function update_m_star!(p::Particle, params)
+    if !params.phys_star_formation
+        return 0.
+    end
     dm_star!(p, params)
 
     if p.m_star > p.m
@@ -237,6 +235,7 @@ function update_m_star!(p::Particle, params)
     p.m_star += p.dm_star * p.dt
 
     p.m_gas = p.m - p.m_star
+    p.ρ_gas = p.m_gas/p.m * p.ρ
 end
 
 

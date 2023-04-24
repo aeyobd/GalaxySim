@@ -3,6 +3,7 @@
 # Methods to output results
 #
 # Created 17-04-2023
+# Revised 23-04-2023 to 
 # Author Daniel Boyea
 
 module GalFiles
@@ -61,10 +62,10 @@ FILE_NAMES = [
     ("du_P", p->p.du_P, "# change in energy due to pressure in ergs"),
     ("du_C", p->p.du_cond, "# change in energy due to conduction"),
     ("du_visc", p->p.du_visc,"# change in energy due to dissipation"),
-    ("dv_P", p->norm(p.dv_P),"# acceleration due to pressure"),
-    ("dv_G", p->norm(p.dv_G),"# acceleration due to gravity"),
-    ("dv_visc", p->norm(p.dv_visc),"# acceleration due to viscosity "),
-    ("dv_DM", p->norm(p.dv_DM),"# acceleration due to dark matter (cm/s^2)"),
+    ("dv_P", p->p.dv_P⋅p.dv/abs(p.v⋅p.dv),"# (linear) acceleration due to pressure"),
+    ("dv_DM", p->p.dv_DM⋅p.dv/abs(p.v⋅p.dv),"# (linear) acceleration due to dark matter"),
+    ("dv_G", p->p.dv_G⋅p.dv/abs(p.v⋅p.dv),"# (linear) acceleration due to gravity"),
+    ("dv_visc", p->p.dv_visc⋅p.dv/abs(p.v⋅p.dv),"# (linear) acceleration due to viscosity"),
    ]
 
 
@@ -83,7 +84,8 @@ function open_files(params)
     global_logger(SimpleLogger(log_file, Logging.Debug))
 
     e_file = open("$(params.name)/energy.dat", "w")
-    println(e_file,     "thermal,kinetic,grav,tot")
+    println(e_file,"# total system energy at each timestep in ergs")
+    println(e_file, "# time (yr)  thermal     kinetic      grav     tot")
 
     var_files = Vector()
 
@@ -104,7 +106,7 @@ end
 """
 Records the current values to files
 """
-function record_particles(files, particles, params)
+function record_particles(files, particles, t, params)
     var_files, e_file, log_file = files
 
     for (file, names) in zip(var_files, FILE_NAMES)
@@ -118,7 +120,7 @@ function record_particles(files, particles, params)
         println(file)
     end
 
-    save_energy(particles, e_file, params)
+    save_energy(particles, e_file, t, params)
 end
 
 
@@ -157,9 +159,9 @@ end
 """
 Saves the energy value to a file
 """
-function save_energy(ps, e_file, params)
+function save_energy(ps, e_file, t, params)
     thermal, kinetic, grav, tot = energy(ps, params)
-    @printf e_file "%8.4e, %8.4e, %8.4e, %8.4e\n" thermal kinetic grav tot
+    @printf e_file "%8.4e   %8.4e   %8.4e   %8.4e  %8.4e\n" (t/yr) thermal kinetic grav tot
 end
 
 

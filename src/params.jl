@@ -62,7 +62,7 @@ using TOML # to read in options from file
 
     # thermal conduction
     phys_conduction::Bool = false
-    K_cond::F = 4e7
+    K0::F = 4e7
     n_K::F = 0.05
 
 

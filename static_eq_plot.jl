@@ -10,6 +10,7 @@
 # This means the density esimation is not perfect but qualitatively
 # (<10%) accurate.
 #
+# Additionally, energy is mostly conserved.
 
 
 using Plots
@@ -17,65 +18,56 @@ using CSV
 using DataFrames
 using LaTeXStrings
 using StatsPlots
+using Glob
 
-fpath = "static_eq/"
 skip = 10
-
-function get_col(col)
-    file = fpath * col * ".dat"
-    df = Array(CSV.read(file, DataFrame, header=false, skipto=2))[1:skip:end, 1:end-1]
+function get_col(file)
+    df = Array(CSV.read(file, DataFrame, 
+            header=false, 
+            comment="#", 
+            delim=' ', 
+            ignorerepeated=true)
+        )[1:skip:end, :]
     return df
 end
 
+# a fancy loop to read in all the files
+for file in glob("./static_eq/*.dat")
+    fname, _ = splitext(basename(file))
+    if fname == "energy"
+        global energy
+        energy = CSV.read(file, DataFrame, 
+            header=["t", "thermal", "kinetic", "grav", "total"], 
+            comment="#", 
+            delim=' ', 
+            ignorerepeated=true
+            )[1:skip:end, :]
 
-x1s = get_col("x1")
-x2s = get_col("x2")
-x3s = get_col("x3")
-v1s = get_col("v1")
-v2s = get_col("v2")
-v3s = get_col("v3")
+    else
+        var = Symbol(fname)
+        @eval $var = get_col($file)
+    end
+end
 
+R = @. sqrt(x1^2 + x2^2 + x3^2)
+V = @. sqrt(v1^2 + v2^2 + v3^2);
+du = du_C .+ du_P .+ du_visc
+dv = dv_P .+ dv_G .+ dv_visc;
+ts = energy.t/1e6;
 
-
-ρs = log10.(get_col("rho"))
-Ts = log10.(get_col("T"))
-ts = get_col("t")
-
-hs = get_col("h")
-dts = get_col("dt")
-Nn = get_col("N_neighbors")
-
-du_P = get_col("du_P")
-du_C = get_col("du_C")
-du_visc = get_col("du_visc")
-du = @. du_P + du_C + du_visc
-
-
-dv_P = get_col("dv_P")
-dv_G = get_col("dv_G")
-dv_visc = get_col("dv_visc")
-dv = @. dv_P + dv_G + dv_visc
-
-
-Rs = @. sqrt(x1s^2 + x2s^2 + x3s^2)
-Vs = @. sqrt(v1s^2 + v2s^2 + v3s^2);
-energy = CSV.read("static_eq/energy.dat", DataFrame)[1:skip:end, :];
-energy[!, "t"] = ts[:, 1];
-
-Nt, N = size(x1s)
+Nt, N = size(x1)
 
 
 i = 2
-scatter(vec(Rs[i, :]), vec(ρs[i,:]), label="t=0")
-ylims!(minimum(ρs[i,:]), maximum(ρs[i, :]))
+scatter(R[i, :], log10.(rho[i,:]), label="t=0")
+ylims!(minimum(log10.(rho[i,:])), maximum(log10.(rho[i, :])))
 
 i=Nt
+scatter!(R[i, :], log10.(rho[i,:]), label="t=100Myr")
 
-scatter!(vec(Rs[i, :]), vec(ρs[i,:]), label="t=100Myr")
 
-
-x_model = LinRange(0, 200., 100)
-y_model = log10.(400 * x_model .^ -2)
+x_model = LinRange(0, 400., 400)
+y_model = log10.(123 * x_model .^ -2)
 
 plot!(x_model, y_model, label=L"$1/r^2$", order=2, lw=5, c="black")
 ylabel!(L"$\log \rho / {\rm cm}^{-3}$")
@@ -87,10 +79,10 @@ savefig("static_eq_rho.pdf")
 
 i = 2
 
-scatter(vec(Rs[i, :]), vec(Vs[i,:]), label="t=0")
+scatter(R[i, :], V[i,:], label="t=0")
 i=Nt
 
-scatter!(vec(Rs[i, :]), vec(Vs[i,:]), label="t=100Myr")
+scatter!(R[i, :], V[i,:], label="t=100Myr")
 
 ylabel!("v (km/s)")
 xlabel!("R (pc)")

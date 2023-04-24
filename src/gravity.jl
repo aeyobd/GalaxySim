@@ -38,6 +38,18 @@ function dv_DM!(p::Particle, params)
 end
 
 
+"""
+Helper function for dv_DM!, returns scalar part of acceleration due
+to DM
+"""
+function a_DM(r::F, params)
+    if r == 0
+        return 0
+    end
+    G*params.M_tot/params.A_NFW * 1/r^2 * (r/(r + params.Rs) - log(1 + r/params.Rs))
+end
+
+
 
 """
 Acceleration due to gravity

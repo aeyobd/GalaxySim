@@ -24,29 +24,43 @@ using DataFrames
 using LinearAlgebra
 using Logging
 using LaTeXStrings
+using Glob
 
+skip = 10
 
-fpath = "./two_body_p/"
-skip = 1
-
-function get_col(col)
-    file = fpath * col * ".dat"
-    df = Array(CSV.read(file, DataFrame, header=false, skipto=2)[1:skip:end, 1:end-1])
+function get_col(file)
+    df = Array(CSV.read(file, DataFrame, 
+            header=false, 
+            comment="#", 
+            delim=' ', 
+            ignorerepeated=true)
+        )[1:skip:end, :]
     return df
 end
 
-x1s = get_col("x1")
-v1s = get_col("x1")
-ρs = get_col("rho")
-Ts = (get_col("T"))
-P = get_col("P")
-ts = get_col("t")
+# a fancy loop to read in all the files
+for file in glob("two_body_p/*.dat")
+    fname, _ = splitext(basename(file))
+    if fname == "energy"
+        global energy
+        energy = CSV.read(file, DataFrame, 
+            header=["t", "thermal", "kinetic", "grav", "total"], 
+            comment="#", 
+            delim=' ', 
+            ignorerepeated=true
+            )[1:skip:end, :]
+    else
+        var = Symbol(fname)
+        @eval $var = get_col($file)
+    end
+end
 
-t = (ts[:, 1] .+ ts[:, 2]) ./ 2 ./ 1e6
 
-y = x1s
-plot(t, y[:, 1], label="m1")
-plot!(t, y[:, 2], label="m2")
+ts = energy.t/1e6
+
+y = x1
+plot(ts, y[:, 1], label="m1")
+plot!(ts, y[:, 2], label="m2")
 xlabel!("time (Myr)")
 ylabel!("position (pc)")
 xlims!(0, 300)
@@ -54,17 +68,17 @@ ylims!(-50, 50)
 savefig("two_body_p_pos.pdf")
 
 
-y = ρs
-plot(t, y[:, 1], label="m1")
-plot!(t, y[:, 2], label="m2")
+y = rho
+plot(ts, y[:, 1], label="m1")
+plot!(ts, y[:, 2], label="m2")
 xlabel!("time (Myr)")
 ylabel!(L"density (cm$^{-3}$)")
 xlims!(0, 300)
 savefig("two_body_p_rho.pdf")
 
-y = Ts
-plot(t, y[:, 1], label="m1")
-plot!(t, y[:, 2], label="m2")
+y = T
+plot(ts, y[:, 1], label="m1")
+plot!(ts, y[:, 2], label="m2")
 xlabel!("time (Myr)")
 ylabel!("temperature (K)")
 xlims!(0, 300)

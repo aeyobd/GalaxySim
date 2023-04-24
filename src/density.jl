@@ -168,8 +168,13 @@ function solve_ρ!(p, params; save=false)
 
     if save # open up a file to write to if saving for the demonstration
         file = open("density.dat", "w")
-        println(file, "h,ρ,Ω,f")
-        println(file, "$(p.h/pc),$(p.ρ/m_p),$(p.Ω),$(f(p,params)/m_p)")
+        println(file, "# values during iterative solver for density")
+        println(file, "# h = smoothing length (pc)")
+        println(file, "# rho = density (pc)")
+        println(file, "# Omega is a dimensionless correction factor")
+        println(file, "# f = current density - new density in cm^-3")
+        println(file, "# h      rho         Omega           f")
+        println(file, "$(p.h/pc)   $(p.ρ/m_p)   $(p.Ω)   $(f(p,params)/m_p)")
     end
 
     # initial guess of h
@@ -180,13 +185,15 @@ function solve_ρ!(p, params; save=false)
         # so we can see what f() looks like 
         # during the density test
         file2 = open("density_f.dat", "w")
-        println(file2, "h,f,df")
+        println(file2, "# h = smoothing length  in pc")
+        println(file2, "# f = current density - new density in cm^-3")
+        println(file2, "# h      f       df")
         for i in LinRange(0.5, 2, 30)
             h = 10^i * pc
             p.h = h
             x = f(p, p.h, params)
             dx = df(p, params)
-            println(file2, "$(p.h/pc),$(x/m_p),$(dx/m_p*pc)")
+            println(file2, "$(p.h/pc)   $(x/m_p)   $(dx/m_p*pc)")
         end
         close(file2)
     end
@@ -208,7 +215,7 @@ function solve_ρ!(p, params; save=false)
 
         if save # record the file
             x = f(p, p.h, params)
-            println(file, "$(p.h/pc),$(p.ρ/m_p),$(p.Ω),$(x/m_p)")
+            println(file, "$(p.h/pc)   $(p.ρ/m_p)    $(p.Ω)    $(x/m_p)")
         end
 
         if abs((h1-p.h)/h0) < params.tol # stop when the value converges (relative)
